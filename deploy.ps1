@@ -1,6 +1,6 @@
 # Publishes the classroom games to GitHub Pages (repo Ahmed-3wad/math-games).
-#   powershell -File Games_Site\deploy.ps1 ["commit message"]
-# Rebuilds each game, copies its site/ folder in, commits and pushes. Every device that
+#   powershell -File D:\EduGames\site\deploy.ps1 ["commit message"]
+# Self-tests the engine, rebuilds each game, copies its site/ folder in, commits and pushes. Every device that
 # has the game installed picks up the new version the next time it opens online.
 param([string]$Message = "Update games")
 $ErrorActionPreference = "Stop"
@@ -8,9 +8,12 @@ $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [En
 $here = $PSScriptRoot
 $root = Split-Path $here
 
-$games = @{ "grade4-millionaire" = "Grade4\Games\Math_Millionaire" }
+# published folder (kept as "grade4-millionaire" so installed home-screen apps keep working) -> game folder
+$games = @{ "grade4-millionaire" = "games\millionaire" }
 foreach ($slug in $games.Keys) {
   $dir = Join-Path $root $games[$slug]
+  node (Join-Path $root "engine\test_engine.js") 300
+  if ($LASTEXITCODE) { throw "engine self-test failed - nothing was published" }
   node (Join-Path $dir "_source\build.js")
   if ($LASTEXITCODE) { throw "build failed: $slug" }
   $dest = Join-Path $here $slug
