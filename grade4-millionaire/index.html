@@ -125,7 +125,7 @@ label.chk input{margin-top:3px;accent-color:var(--gold);width:17px;height:17px;f
 .note{color:var(--muted);font-size:13px}
 
 /* ---- overlays ---- */
-.overlay{position:fixed;inset:0;background:rgba(2,11,38,.82);display:grid;place-items:center;padding:16px;z-index:20}
+.overlay{position:fixed;inset:0;background:rgba(2,11,38,.82);display:grid;place-items:center;padding:16px;z-index:30}
 .modal{background:var(--stage);border:2px solid var(--silver);border-radius:18px;padding:clamp(16px,2.4vw,32px);width:min(640px,100%);box-sizing:border-box;text-align:center}
 .modal h3{font-family:var(--display);color:var(--gold);font-size:clamp(20px,2.2vw,30px);margin:0 0 6px}
 .votes{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0;align-items:end}
@@ -139,6 +139,56 @@ label.chk input{margin-top:3px;accent-color:var(--gold);width:17px;height:17px;f
 .ring{font-family:var(--display);font-size:72px;color:var(--gold);margin:14px 0;font-variant-numeric:tabular-nums}
 canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
 
+/* ---- top-left menu ---- */
+.menu-btn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:calc(env(safe-area-inset-left,0px) + 14px);z-index:25;width:46px;height:46px;border-radius:12px;
+  border:1.5px solid rgba(201,211,234,.6);background:rgba(2,11,38,.7);display:grid;place-items:center;padding:0}
+.menu-btn:hover{border-color:var(--gold)}
+.menu-btn svg{width:24px;height:24px}
+.menu-space{width:50px;flex:none}
+.scrim{position:fixed;inset:0;background:rgba(2,11,38,.6);z-index:39}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(360px,88vw);z-index:40;background:var(--stage);border-right:2px solid rgba(201,211,234,.5);
+  padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 20px;box-sizing:border-box;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+  box-shadow:8px 0 30px rgba(0,0,0,.5);animation:slidein .2s ease-out}
+@keyframes slidein{from{transform:translateX(-100%)}}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.drawer-head b{font-family:var(--display);color:var(--gold);font-size:22px}
+.x{width:38px;height:38px;border-radius:10px;border:1.5px solid rgba(201,211,234,.5);background:transparent;font-size:22px;line-height:1}
+.mitem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:rgba(2,11,38,.45);border:1.5px solid transparent;border-radius:12px;
+  padding:12px 14px;font-family:var(--display);font-size:16px}
+.mitem:hover{border-color:rgba(252,165,0,.6)}
+.mitem .chev{margin-left:auto;color:var(--muted);transition:transform .15s}
+.mitem[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.mitem small{font-family:var(--body);color:var(--muted);font-size:12px;margin-left:auto}
+.mitem:disabled{opacity:.5;cursor:default}
+.mitem:disabled:hover{border-color:transparent}
+.mitem .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);flex:none}
+.sub-menu{display:flex;flex-direction:column;gap:6px;padding:4px 0 6px 14px;border-left:2px solid rgba(252,165,0,.35);margin-left:12px}
+.lessons{background:rgba(2,11,38,.45);border-radius:12px;padding:8px 12px}
+.lessons .row{justify-content:space-between;margin:0 0 4px}
+.lessons .link{background:none;border:0;color:var(--gold);font-size:13px;padding:2px 4px;text-decoration:underline}
+.lessons label.chk{font-size:14px}
+.mnote{color:var(--muted);font-size:12px;margin:4px 2px 0;line-height:1.4}
+.mgroup{font-family:var(--display);color:var(--muted);font-size:12px;letter-spacing:.12em;margin:12px 4px 2px}
+.lsum{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--silver);font-size:14px;margin:4px 0 8px;line-height:1.5}
+
+/* ---- instructions ---- */
+.modal.wide{width:min(760px,100%);max-height:calc(100vh - 32px);overflow-y:auto;text-align:left}
+.tabs{display:flex;gap:8px;justify-content:center;margin:6px 0 14px}
+.tabs button{border:1.5px solid var(--silver);background:transparent;border-radius:99px;padding:5px 16px;font-family:var(--display);font-size:14px}
+.tabs button[aria-selected="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.howto h4{font-family:var(--display);color:var(--gold);font-size:17px;margin:14px 0 8px}
+.howto ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:s}
+.howto ol li{display:flex;gap:10px;line-height:1.5;font-size:15px}
+.howto ol li:before{counter-increment:s;content:counter(s);flex:none;width:24px;height:24px;border-radius:50%;background:var(--gold);color:var(--ink);
+  font-family:var(--display);font-size:13px;display:grid;place-items:center;margin-top:1px}
+.howto .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.howto .box{background:rgba(2,11,38,.5);border-radius:12px;padding:10px 14px}
+.howto .box b.t{display:block;font-family:var(--display);margin-bottom:6px}
+.howto ul{margin:0;padding:0 0 0 18px;line-height:1.6;font-size:15px}
+.howto[dir="rtl"]{text-align:right}
+.howto[dir="rtl"] ul{padding:0 18px 0 0}
+.howto .url{display:inline-block;direction:ltr;font-family:var(--display);color:var(--gold);word-break:break-all}
+@media (max-width:520px){.howto .two{grid-template-columns:1fr}}
 @media (max-width:820px){
   .play{grid-template-columns:1fr}
   .ladder{display:none}
@@ -177,7 +227,7 @@ canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
           </div>
           <div>
             <h2>Lessons in the game</h2>
-            <div id="lessonList"></div>
+            <div class="lsum"><span id="lessonSum">7 lessons</span><button class="btn ghost" id="btnPickLessons" style="font-size:13px;padding:.35em 1em">Change in the menu</button></div>
             <div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" id="optTimer" checked> Timer (30 s / 45 s / 60 s)</label></div>
             <div class="row"><label class="chk"><input type="checkbox" id="optSound" checked> Sound effects</label></div>
           </div>
@@ -203,6 +253,7 @@ canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
   <!-- GAME -->
   <section class="screen" id="scrGame" hidden>
     <div class="top">
+      <span class="menu-space"></span>
       <span class="chip crew" id="gCrew">Crew 1</span>
       <span class="chip" id="gChip">Question 1 &#xb7; Lesson 2-1</span>
       <span class="spacer"></span>
@@ -267,8 +318,92 @@ canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
     <button class="btn" id="closeFriend">Back to the question</button>
   </div>
 </div>
-<!-- Scoreboard -->
-<div class="overlay" id="ovScores" hidden>
+<!-- Top-left menu -->
+<button class="menu-btn" id="btnMenu" aria-label="Open menu" aria-controls="drawer" aria-expanded="false">
+  <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="#FCA500" stroke-width="2.4" stroke-linecap="round"/></svg>
+</button>
+<div class="scrim" id="scrim" hidden></div>
+<nav class="drawer" id="drawer" hidden aria-label="Menu">
+  <div class="drawer-head"><b>Menu</b><button class="x" id="closeMenu" aria-label="Close menu">&times;</button></div>
+
+  <div class="mgroup">GRADE LEVEL</div>
+  <button class="mitem" id="mGrade4" aria-expanded="true" aria-controls="subGrade4"><span class="dot"></span>Grade 4<span class="chev">&#9656;</span></button>
+  <div class="sub-menu" id="subGrade4">
+    <div class="lessons">
+      <div class="row"><b style="font-family:var(--display);font-size:14px">Lessons</b>
+        <span><button class="link" id="lesAll">All</button><button class="link" id="lesNone">None</button></span></div>
+      <div id="lessonList"></div>
+    </div>
+    <p class="mnote" id="lessonNote">Changes start with the next round.</p>
+  </div>
+  <button class="mitem" disabled>Grade 5<small>Coming soon</small></button>
+  <button class="mitem" disabled>Grade 8<small>Coming soon</small></button>
+
+  <div class="mgroup">GAME</div>
+  <button class="mitem" id="mHelp">Game instructions</button>
+  <button class="mitem" id="mScores">Scoreboard</button>
+  <button class="mitem" id="mNew">New game</button>
+</nav>
+
+<!-- Game instructions -->
+<div class="overlay" id="ovHelp" hidden>
+  <div class="modal wide">
+    <h3 style="text-align:center">Game instructions</h3>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabEn" aria-selected="true">English</button>
+      <button role="tab" id="tabAr" aria-selected="false">&#x639;&#x631;&#x628;&#x64a;</button>
+    </div>
+
+    <div class="howto" id="helpEn" dir="ltr">
+      <h4>How to play</h4>
+      <ol>
+        <li><span>Open the menu &#9776; and choose the <b>grade</b> and the <b>lessons</b>. Then set the number of crews, type their names and tap <b>Start the game</b>.</span></li>
+        <li><span>One crew sits in the <b>Hot Seat</b>. Everyone solves the question on their whiteboard.</span></li>
+        <li><span>The Hot Seat crew picks A, B, C or D and says <b>"Final answer!"</b></span></li>
+        <li><span>Correct: climb one step. Wrong: drop back to the last safe step (<b>1,000</b> or <b>32,000</b>). A crew may also <b>walk away</b> and keep its points.</span></li>
+        <li><span>At the end of a round the scoreboard updates and the next crew plays. Every round has 15 new questions.</span></li>
+      </ol>
+      <h4>Lifelines: each one once per round</h4>
+      <ul>
+        <li><b>50:50</b>: two wrong answers disappear.</li>
+        <li><b>Ask the Class</b>: the class votes with Show Me boards. Count the votes with + and &minus;.</li>
+        <li><b>Ask a Friend</b>: one classmate helps for 30 seconds.</li>
+      </ul>
+      <h4>Add it as an app</h4>
+      <div class="two">
+        <div class="box"><b class="t">iPad / iPhone (Safari)</b><ul><li>Open the link in Safari.</li><li>Tap the Share button.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li></ul></div>
+        <div class="box"><b class="t">Android (Chrome)</b><ul><li>Open the link in Chrome.</li><li>Tap the menu &#8942; at the top.</li><li>Choose <b>Add to Home screen</b> or <b>Install app</b>.</li></ul></div>
+      </div>
+      <p class="note" style="margin-top:10px">Link: <span class="url">ahmed-3wad.github.io/math-games/grade4-millionaire/</span><br>Keyboard: A&ndash;D choose an answer &middot; Enter = Final answer / Next</p>
+    </div>
+
+    <div class="howto" id="helpAr" dir="rtl" hidden>
+      <h4>&#x637;&#x631;&#x64a;&#x642;&#x629; &#x627;&#x644;&#x644;&#x639;&#x628;</h4>
+      <ol>
+        <li><span>&#x627;&#x641;&#x62a;&#x62d; &#x627;&#x644;&#x642;&#x627;&#x626;&#x645;&#x629; &#9776; &#x648;&#x627;&#x62e;&#x62a;&#x631; <b>&#x627;&#x644;&#x635;&#x641;</b> &#x648;<b>&#x627;&#x644;&#x62f;&#x631;&#x648;&#x633;</b>&#x60c; &#x62b;&#x645; &#x62d;&#x62f;&#x650;&#x651;&#x62f; &#x639;&#x62f;&#x62f; &#x627;&#x644;&#x641;&#x631;&#x642; &#x648;&#x627;&#x643;&#x62a;&#x628; &#x623;&#x633;&#x645;&#x627;&#x621;&#x647;&#x627; &#x648;&#x627;&#x636;&#x63a;&#x637; <bdi><b>Start the game</b></bdi>.</span></li>
+        <li><span>&#x64a;&#x62c;&#x644;&#x633; &#x641;&#x631;&#x64a;&#x642; &#x648;&#x627;&#x62d;&#x62f; &#x639;&#x644;&#x649; <bdi><b>Hot Seat</b></bdi>&#x60c; &#x648;&#x64a;&#x62d;&#x644; &#x62c;&#x645;&#x64a;&#x639; &#x627;&#x644;&#x637;&#x644;&#x627;&#x628; &#x627;&#x644;&#x633;&#x624;&#x627;&#x644; &#x639;&#x644;&#x649; &#x627;&#x644;&#x633;&#x628;&#x648;&#x631;&#x627;&#x62a; &#x627;&#x644;&#x635;&#x63a;&#x64a;&#x631;&#x629;.</span></li>
+        <li><span>&#x64a;&#x62e;&#x62a;&#x627;&#x631; &#x627;&#x644;&#x641;&#x631;&#x64a;&#x642; A &#x623;&#x648; B &#x623;&#x648; C &#x623;&#x648; D &#x648;&#x64a;&#x642;&#x648;&#x644;: <bdi dir="ltr"><b>"Final answer!"</b></bdi></span></li>
+        <li><span>&#x625;&#x62c;&#x627;&#x628;&#x629; &#x635;&#x62d;&#x64a;&#x62d;&#x629;: &#x635;&#x639;&#x648;&#x62f; &#x62f;&#x631;&#x62c;&#x629;. &#x625;&#x62c;&#x627;&#x628;&#x629; &#x62e;&#x627;&#x637;&#x626;&#x629;: &#x646;&#x632;&#x648;&#x644; &#x625;&#x644;&#x649; &#x622;&#x62e;&#x631; &#x645;&#x62d;&#x637;&#x629; &#x623;&#x645;&#x627;&#x646; (<b>1,000</b> &#x623;&#x648; <b>32,000</b>). &#x648;&#x64a;&#x645;&#x643;&#x646; &#x644;&#x644;&#x641;&#x631;&#x64a;&#x642; <b>&#x627;&#x644;&#x627;&#x646;&#x633;&#x62d;&#x627;&#x628;</b> &#x648;&#x627;&#x644;&#x627;&#x62d;&#x62a;&#x641;&#x627;&#x638; &#x628;&#x646;&#x642;&#x627;&#x637;&#x647;.</span></li>
+        <li><span>&#x641;&#x64a; &#x646;&#x647;&#x627;&#x64a;&#x629; &#x627;&#x644;&#x62c;&#x648;&#x644;&#x629; &#x62a;&#x64f;&#x62d;&#x62f;&#x64e;&#x651;&#x62b; &#x644;&#x648;&#x62d;&#x629; &#x627;&#x644;&#x646;&#x642;&#x627;&#x637; &#x648;&#x64a;&#x644;&#x639;&#x628; &#x627;&#x644;&#x641;&#x631;&#x64a;&#x642; &#x627;&#x644;&#x62a;&#x627;&#x644;&#x64a;. &#x643;&#x644; &#x62c;&#x648;&#x644;&#x629; &#x641;&#x64a;&#x647;&#x627; 15 &#x633;&#x624;&#x627;&#x644;&#x64b;&#x627; &#x62c;&#x62f;&#x64a;&#x62f;&#x64b;&#x627;.</span></li>
+      </ol>
+      <h4>&#x648;&#x633;&#x627;&#x626;&#x644; &#x627;&#x644;&#x645;&#x633;&#x627;&#x639;&#x62f;&#x629;: &#x643;&#x644; &#x648;&#x633;&#x64a;&#x644;&#x629; &#x645;&#x631;&#x629; &#x648;&#x627;&#x62d;&#x62f;&#x629; &#x641;&#x64a; &#x627;&#x644;&#x62c;&#x648;&#x644;&#x629;</h4>
+      <ul>
+        <li><bdi><b>50:50</b></bdi>: &#x62a;&#x62e;&#x62a;&#x641;&#x64a; &#x625;&#x62c;&#x627;&#x628;&#x62a;&#x627;&#x646; &#x62e;&#x627;&#x637;&#x626;&#x62a;&#x627;&#x646;.</li>
+        <li><bdi><b>Ask the Class</b></bdi>: &#x64a;&#x635;&#x648;&#x650;&#x651;&#x62a; &#x627;&#x644;&#x641;&#x635;&#x644; &#x628;&#x627;&#x644;&#x633;&#x628;&#x648;&#x631;&#x627;&#x62a; &#x627;&#x644;&#x635;&#x63a;&#x64a;&#x631;&#x629;&#x60c; &#x648;&#x62a;&#x64f;&#x639;&#x64e;&#x62f;&#x651; &#x627;&#x644;&#x623;&#x635;&#x648;&#x627;&#x62a; &#x628;&#x632;&#x631;&#x64e;&#x651;&#x64a; + &#x648;&minus;.</li>
+        <li><bdi><b>Ask a Friend</b></bdi>: &#x64a;&#x633;&#x627;&#x639;&#x62f; &#x632;&#x645;&#x64a;&#x644; &#x648;&#x627;&#x62d;&#x62f; &#x644;&#x645;&#x62f;&#x629; 30 &#x62b;&#x627;&#x646;&#x64a;&#x629;.</li>
+      </ul>
+      <h4>&#x623;&#x636;&#x650;&#x641;&#x647;&#x627; &#x643;&#x62a;&#x637;&#x628;&#x64a;&#x642;</h4>
+      <div class="two">
+        <div class="box"><b class="t">&#x622;&#x64a;&#x628;&#x627;&#x62f; / &#x622;&#x64a;&#x641;&#x648;&#x646; <bdi>(Safari)</bdi></b><ul><li>&#x627;&#x641;&#x62a;&#x62d; &#x627;&#x644;&#x631;&#x627;&#x628;&#x637; &#x641;&#x64a; &#x645;&#x62a;&#x635;&#x641;&#x62d; Safari.</li><li>&#x627;&#x636;&#x63a;&#x637; &#x632;&#x631; &#x627;&#x644;&#x645;&#x634;&#x627;&#x631;&#x643;&#x629;.</li><li>&#x627;&#x62e;&#x62a;&#x631; <bdi><b>Add to Home Screen</b></bdi> &#x62b;&#x645; <bdi><b>Add</b></bdi>.</li></ul></div>
+        <div class="box"><b class="t">&#x623;&#x646;&#x62f;&#x631;&#x648;&#x64a;&#x62f; <bdi>(Chrome)</bdi></b><ul><li>&#x627;&#x641;&#x62a;&#x62d; &#x627;&#x644;&#x631;&#x627;&#x628;&#x637; &#x641;&#x64a; &#x645;&#x62a;&#x635;&#x641;&#x62d; Chrome.</li><li>&#x627;&#x636;&#x63a;&#x637; &#x627;&#x644;&#x642;&#x627;&#x626;&#x645;&#x629; &#8942; &#x641;&#x64a; &#x627;&#x644;&#x623;&#x639;&#x644;&#x649;.</li><li>&#x627;&#x62e;&#x62a;&#x631; <bdi><b>Add to Home screen</b></bdi> &#x623;&#x648; <bdi><b>Install app</b></bdi>.</li></ul></div>
+      </div>
+      <p class="note" style="margin-top:10px">&#x627;&#x644;&#x631;&#x627;&#x628;&#x637;: <span class="url">ahmed-3wad.github.io/math-games/grade4-millionaire/</span><br>&#x644;&#x648;&#x62d;&#x629; &#x627;&#x644;&#x645;&#x641;&#x627;&#x62a;&#x64a;&#x62d;: A&ndash;D &#x644;&#x627;&#x62e;&#x62a;&#x64a;&#x627;&#x631; &#x627;&#x644;&#x625;&#x62c;&#x627;&#x628;&#x629; &middot; <bdi>Enter</bdi> &#x644;&#x644;&#x625;&#x62c;&#x627;&#x628;&#x629; &#x627;&#x644;&#x646;&#x647;&#x627;&#x626;&#x64a;&#x629; / &#x627;&#x644;&#x62a;&#x627;&#x644;&#x64a;</p>
+    </div>
+    <div class="bar" style="margin-top:14px"><button class="btn" id="closeHelp">Close</button></div>
+  </div>
+</div>
+
+<!-- Scoreboard --><div class="overlay" id="ovScores" hidden>
   <div class="modal"><h3>Scoreboard</h3><table class="score" id="scoreTable2" style="margin:10px auto"></table>
   <button class="btn" id="closeScores">Close</button></div>
 </div>
@@ -574,13 +709,55 @@ function renderSetup() {
   sel.innerHTML = [1, 2, 3, 4, 5, 6].map(n => `<option ${n === S.crews.length ? "selected" : ""}>${n}</option>`).join("");
   $("crewNames").innerHTML = S.crews.map((c, i) => `<input type="text" id="crew${i}" value="${c.name.replace(/"/g, "&quot;")}" aria-label="Crew ${i + 1} name" maxlength="20">`).join("");
   S.crews.forEach((c, i) => $("crew" + i).addEventListener("input", e => { c.name = e.target.value || `Crew ${i + 1}`; save("names", S.crews.map(x => x.name)); }));
-  $("lessonList").innerHTML = LESSONS.map(([c, n]) => `<label class="chk"><input type="checkbox" id="les${c}" ${S.lessons.includes(c) ? "checked" : ""}><span><span class="tag">${c}</span>${n}</span></label>`).join("");
-  LESSONS.forEach(([c]) => $("les" + c).addEventListener("change", e => {
-    S.lessons = LESSONS.map(([x]) => x).filter(x => $("les" + x).checked);
-    $("btnStart").disabled = !S.lessons.length;
-  }));
+  renderLessons();
   $("optTimer").checked = S.timerOn; $("optSound").checked = S.sound;
 }
+
+/* ---- top-left menu: grade level -> lessons, instructions, scoreboard, new game ---- */
+function renderLessons() {
+  $("lessonList").innerHTML = LESSONS.map(([c, n]) => `<label class="chk"><input type="checkbox" id="les${c}" ${S.lessons.includes(c) ? "checked" : ""}><span><span class="tag">${c}</span>${n}</span></label>`).join("");
+  LESSONS.forEach(([c]) => $("les" + c).addEventListener("change", () => setLessons(LESSONS.map(([x]) => x).filter(x => $("les" + x).checked))));
+  lessonSummary();
+}
+function setLessons(list) {
+  S.lessons = list;
+  LESSONS.forEach(([c]) => ($("les" + c).checked = list.includes(c)));
+  lessonSummary();
+  const st = load("settings", {}); st.lessons = list; save("settings", st);
+}
+function lessonSummary() {
+  const n = S.lessons.length;
+  $("lessonSum").textContent = n === LESSONS.length ? `Grade 4 \u00b7 all ${n} lessons` : n ? `Grade 4 \u00b7 ${n} of ${LESSONS.length} lessons: ${S.lessons.join(", ")}` : "No lessons chosen";
+  $("btnStart").disabled = !n;
+  $("lessonNote").textContent = n ? "Changes start with the next round." : "Choose at least one lesson.";
+}
+$("lesAll").addEventListener("click", () => setLessons(LESSONS.map(([c]) => c)));
+$("lesNone").addEventListener("click", () => setLessons([]));
+function openMenu(focusLessons) {
+  $("drawer").hidden = false; $("scrim").hidden = false; $("btnMenu").setAttribute("aria-expanded", "true");
+  if (focusLessons) { $("subGrade4").hidden = false; $("mGrade4").setAttribute("aria-expanded", "true"); }
+  $("closeMenu").focus();
+}
+function closeMenu() { $("drawer").hidden = true; $("scrim").hidden = true; $("btnMenu").setAttribute("aria-expanded", "false"); }
+$("btnMenu").addEventListener("click", () => ($("drawer").hidden ? openMenu() : closeMenu()));
+$("closeMenu").addEventListener("click", closeMenu);
+$("scrim").addEventListener("click", closeMenu);
+$("btnPickLessons").addEventListener("click", () => openMenu(true));
+$("mGrade4").addEventListener("click", () => {
+  const open = $("subGrade4").hidden; $("subGrade4").hidden = !open; $("mGrade4").setAttribute("aria-expanded", String(open));
+});
+function helpLang(lang) {
+  $("helpEn").hidden = lang !== "en"; $("helpAr").hidden = lang !== "ar";
+  $("tabEn").setAttribute("aria-selected", String(lang === "en")); $("tabAr").setAttribute("aria-selected", String(lang === "ar"));
+  save("helpLang", lang);
+}
+$("tabEn").addEventListener("click", () => helpLang("en"));
+$("tabAr").addEventListener("click", () => helpLang("ar"));
+$("mHelp").addEventListener("click", () => { closeMenu(); helpLang(load("helpLang", "en")); $("ovHelp").hidden = false; });
+$("closeHelp").addEventListener("click", () => ($("ovHelp").hidden = true));
+$("mScores").addEventListener("click", () => { closeMenu(); scoreTable($("scoreTable2")); $("ovScores").hidden = false; });
+$("mNew").addEventListener("click", () => { closeMenu(); stopTimer(); renderSetup(); show("scrSetup"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeMenu(); $("ovHelp").hidden = true; $("ovScores").hidden = true; } });
 $("crewCount").addEventListener("change", e => {
   const n = +e.target.value, names = load("names", []);
   S.crews = Array.from({ length: n }, (_, i) => S.crews[i] || { name: names[i] || `Crew ${i + 1}`, score: 0, rounds: 0 });
@@ -644,7 +821,7 @@ function startTimer() {
   if (!S.timerOn) return;
   tLeft = TIME[Math.floor(S.qi / 5)]; el.textContent = tLeft;
   timerId = setInterval(() => {
-    if (!$("ovClass").hidden || !$("ovFriend").hidden) return;      // paused while a lifeline is open
+    if (!$("ovClass").hidden || !$("ovFriend").hidden || !$("drawer").hidden || !$("ovHelp").hidden) return;      // paused while a lifeline, the menu or the instructions are open
     tLeft = Math.max(0, tLeft - 1); el.textContent = tLeft === 0 ? "0" : tLeft;
     el.classList.toggle("low", tLeft <= 5);
     if (tLeft <= 5 && tLeft > 0) sfx.tick();
@@ -735,7 +912,7 @@ $("closeFriend").addEventListener("click", () => { clearInterval(fId); $("ovFrie
 function updateMute() { $("btnMute").textContent = `Sound: ${S.sound ? "on" : "off"}`; }
 $("btnMute").addEventListener("click", () => { S.sound = !S.sound; updateMute(); });
 document.addEventListener("keydown", e => {
-  if (S.screen !== "scrGame" || !$("ovClass").hidden || !$("ovFriend").hidden || e.target.tagName === "INPUT") return;
+  if (S.screen !== "scrGame" || !$("ovClass").hidden || !$("ovFriend").hidden || !$("drawer").hidden || !$("ovHelp").hidden || !$("ovScores").hidden || e.target.tagName === "INPUT") return;
   const k = e.key.toUpperCase(), i = "ABCD".indexOf(k);
   if (i >= 0 && k.length === 1) choose(i);
   if (e.key === "Enter") { if (!$("btnNext").hidden) $("btnNext").click(); else if (!S.locked) finalAnswer(); }
