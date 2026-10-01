@@ -178,6 +178,11 @@ canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
 .qfig{display:block;margin:.4em auto 0;height:clamp(110px,15vw,190px);width:auto;max-width:100%}
 .ai-q .qfig{height:120px}
 .mitem.on{border-color:rgba(252,165,0,.6)}
+.seg2{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid rgba(201,211,234,.45);border-radius:99px;overflow:hidden;margin:2px 0 8px}
+.seg2 button{background:transparent;border:0;padding:6px 8px;font-family:var(--display);font-size:13px}
+.seg2 button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+.lessons .topic{font-family:var(--display);color:var(--gold);font-size:12px;letter-spacing:.06em;margin:8px 0 2px;text-transform:uppercase}
+.lessons .lref{color:var(--muted);font-size:11px;margin-left:4px}
 a.mitem.home{text-decoration:none;color:var(--gold);margin-bottom:4px}
 
 /* ---- play mode ---- */
@@ -406,7 +411,7 @@ a.mitem.home{text-decoration:none;color:var(--gold);margin-bottom:4px}
   <div id="gradeMenu"></div>
   <div class="sub-menu" id="subGrade">
     <div class="lessons">
-      <div class="row"><b style="font-family:var(--display);font-size:14px" id="lessonsHead">Lessons</b>
+      <div class="row" style="flex-wrap:wrap"><div id="lessonsHead" style="width:100%"></div>
         <span><button class="link" id="lesAll">All</button><button class="link" id="lesNone">None</button></span></div>
       <div id="lessonList"></div>
     </div>
@@ -600,8 +605,8 @@ const GRADES = {};   // GRADES[g] = { name, lessons: [[code, title]], gen: { cod
 const G = {};   // generators by lesson: (tier) => question
 
 /* 2-1 place value */
-G["2-1"] = t => {
-  const kind = pick(t === 1 ? ["value", "value", "digit"] : t === 2 ? ["value", "digit", "times"] : ["value", "times", "digit"]);
+G["2-1"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["value", "value", "digit"] : t === 2 ? ["value", "digit", "times"] : ["value", "times", "digit"]);
   const len = [4, 5, 6][t - 1] + (t === 1 ? R(0, 1) : 0);
   if (kind === "value") {
     for (;;) {
@@ -656,8 +661,8 @@ function zeroSlips(n) {                         // common mistakes when a number
       out.push([Number(s.slice(0, i) + s[i + 1] + s[i] + s.slice(i + 2)), `Two digits are swapped (${s[i]} and ${s[i + 1]}). Check the order of the digits.`]);
   return shuffle(out);
 }
-G["2-2"] = t => {
-  const kind = pick(t === 1 ? ["wordTo", "expanded"] : t === 2 ? ["wordTo", "expanded", "toWord"] : ["wordTo", "places", "toWord"]);
+G["2-2"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["wordTo", "expanded"] : t === 2 ? ["wordTo", "expanded", "toWord"] : ["wordTo", "places", "toWord"]);
   const len = [4, 5, 6][t - 1];
   if (kind === "wordTo") {
     const n = withZero(len), th = Math.floor(n / 1000), r = n % 1000;
@@ -699,9 +704,9 @@ function near(n, len, p) { for (;;) { const d = digitsOf(n); d[p] = R(0, 9); con
 const firstDiff = (a, b) => { const x = digitsOf(a), y = digitsOf(b); for (let i = x.length - 1; i >= 0; i--) if (x[i] !== y[i]) return i; return 0; };
 const sym = (a, b) => (a > b ? ">" : a < b ? "<" : "=");
 const cmpWhy = (a, b) => { const p = firstDiff(a, b); return `The first different digits are in the ${PLACE[p]} place: ${digitsOf(a)[p]} ${sym(digitsOf(a)[p], digitsOf(b)[p])} ${digitsOf(b)[p]}, so ${fmt(a)} ${sym(a, b)} ${fmt(b)}.`; };
-G["2-3"] = t => {
+G["2-3"] = (t, force) => {
   const len = [4, 5, 6][t - 1] + (t === 1 ? R(0, 1) : 0);
-  const kind = pick(t === 1 ? ["true", "most"] : ["true", "most", "order"]);
+  const kind = force || pick(t === 1 ? ["true", "most"] : ["true", "most", "order"]);
   if (kind === "true") {
     const make = () => { const a = randN(len); return [a, near(a, len, R(0, len - 2))]; };
     const [a, b] = make(), ans = `${fmt(a)} ${sym(a, b)} ${fmt(b)}`;
@@ -734,8 +739,8 @@ G["2-3"] = t => {
 
 /* 2-4 round */
 const roundTo = (n, p) => Math.round(n / P10(p)) * P10(p);
-G["2-4"] = t => {
-  const kind = t === 1 ? "round" : pick(["round", "round", "which"]);
+G["2-4"] = (t, force) => {
+  const kind = force || (t === 1 ? "round" : pick(["round", "round", "which"]));
   const p = t === 1 ? R(1, 2) : t === 2 ? R(2, 4) : R(3, 5);
   const len = Math.max(p + 1, t === 1 ? R(3, 4) : t === 2 ? 5 : 6);
   if (kind === "round") {
@@ -783,7 +788,7 @@ function addInfo(a, b) {
   for (let i = 0; i < len; i++) { const s = (x[i] || 0) + (y[i] || 0); noCarry.push(s % 10); if (s + carry >= 10) carries.push(i); carry = s + carry >= 10 ? 1 : 0; }
   return { carries, noCarry: fromDigits(noCarry.slice(0, len)) };
 }
-function addQ(lesson, t, regroup) {
+function addQ(lesson, t, regroup, force) {     // force: "calc" = a sum to work out, "story" = a word problem
   const lens = t === 1 ? [R(3, 4), R(3, 4)] : t === 2 ? [R(4, 5), 4] : [5, R(4, 5)];
   let a, b, info;
   for (;;) {
@@ -794,7 +799,7 @@ function addQ(lesson, t, regroup) {
     if (regroup && (t === 1 ? info.carries.length !== 1 : info.carries.length < 2)) continue;
     if (a + b < 1e6) break;
   }
-  const ans = a + b, st = t === 3 ? pick(ADD_STORIES) : null;
+  const ans = a + b, st = (force ? force === "story" : t === 3) ? pick(ADD_STORIES) : null;
   const text = st ? story(st, a, b) : `${fmt(a)} + ${fmt(b)} = ?`;
   const cols = addColumns(a, b);
   let explain = `Line up the places and add from the ones: ${fmt(a)} + ${fmt(b)} = ${fmt(ans)}.`;
@@ -810,7 +815,7 @@ function addQ(lesson, t, regroup) {
   return makeQ(lesson, text, ans, cands, explain,
     [st ? `This is an adding problem: ${fmt(a)} + ${fmt(b)}.` : "Write the numbers one under the other.", "Line up the places: ones under ones, tens under tens\u2026", ...cols.slice(0, -1).concat(cols.length > 1 ? ["Keep going to the last place."] : [])]);
 }
-function subQ(t) {
+function subQ(t, force) {
   const lens = t === 1 ? [R(3, 4), 3] : t === 2 ? [R(4, 5), 4] : [5, R(4, 5)];
   let a, b;
   for (;;) {
@@ -820,7 +825,7 @@ function subQ(t) {
     a = fromDigits(x);
     if (a > b && a - b >= 100) break;
   }
-  const ans = a - b, st = t === 3 ? pick(SUB_STORIES) : null;
+  const ans = a - b, st = (force ? force === "story" : t === 3) ? pick(SUB_STORIES) : null;
   const text = st ? story(st, a, b) : `${fmt(a)} \u2212 ${fmt(b)} = ?`;
   const cols = subColumns(a, b);
   return makeQ("3-6", text, ans,
@@ -828,9 +833,9 @@ function subQ(t) {
     `Line up the places and subtract from the ones. No place needs regrouping: ${fmt(a)} \u2212 ${fmt(b)} = ${fmt(ans)}.`,
     [st ? `This is a subtracting problem: ${fmt(a)} \u2212 ${fmt(b)}.` : "Write the bigger number on top.", "Line up the places: ones under ones, tens under tens\u2026", ...cols.slice(0, -1), "Keep going to the last place."]);
 }
-G["3-3"] = t => addQ("3-3", t, false);
-G["3-4"] = t => addQ("3-4", t, true);
-G["3-6"] = t => subQ(t);
+G["3-3"] = (t, force) => addQ("3-3", t, false, force);
+G["3-4"] = (t, force) => addQ("3-4", t, true, force);
+G["3-6"] = (t, force) => subQ(t, force);
 const LESSONS = [
   ["2-1", "Understand the Structure of Multi-Digit Numbers"],
   ["2-2", "Read and Write Numbers to One Million"],
@@ -840,7 +845,28 @@ const LESSONS = [
   ["3-4", "Addition Algorithm Involving Regrouping"],
   ["3-6", "Understand a Subtraction Algorithm"],
 ];
-GRADES["4"] = { name: "Grade 4", lessons: LESSONS, gen: G };
+// Skills = one kind of question inside a lesson ("lesson:kind"), grouped by topic for the menus.
+const SKILLS = [
+  ["2-1:value", "Place value", "Value of a digit"],
+  ["2-1:digit", "Place value", "Find the digit in a place"],
+  ["2-1:times", "Place value", "10 times and 100 times the value"],
+  ["2-2:wordTo", "Reading and writing numbers", "Word form to standard form"],
+  ["2-2:toWord", "Reading and writing numbers", "Standard form to word form"],
+  ["2-2:expanded", "Reading and writing numbers", "Expanded form to standard form"],
+  ["2-2:places", "Reading and writing numbers", "Find the number from place clues"],
+  ["2-3:true", "Comparing and ordering", "Compare with >, < and ="],
+  ["2-3:most", "Comparing and ordering", "Greatest or least number"],
+  ["2-3:order", "Comparing and ordering", "Order from least to greatest"],
+  ["2-4:round", "Rounding", "Round to a given place"],
+  ["2-4:which", "Rounding", "Which number rounds to it?"],
+  ["3-3:calc", "Adding and subtracting", "Add without regrouping"],
+  ["3-4:calc", "Adding and subtracting", "Add with regrouping"],
+  ["3-6:calc", "Adding and subtracting", "Subtract without regrouping"],
+  ["3-3:story", "Word problems", "Addition word problems"],
+  ["3-4:story", "Word problems", "Addition word problems with regrouping"],
+  ["3-6:story", "Word problems", "Subtraction word problems"],
+].map(([id, topic, name]) => ({ id, topic, name }));
+GRADES["4"] = { name: "Grade 4", lessons: LESSONS, skills: SKILLS, gen: G };
 })();
 
 /* ================= Grade 5 \u00b7 Unit 2 (volume) and Unit 3 (place value, decimals) ================= */
@@ -893,8 +919,8 @@ const SITUATIONS = {
   area: ["the wall space covered by a poster", "the floor covered by a rug", "the grass covering a football field", "the paper needed to cover a book"],
   length: ["the distance of a bike ride", "the distance around a building", "the height of a door", "the length of a school hallway"],
 };
-G["2-1"] = t => {
-  const kind = pick(t === 1 ? ["need", "unit"] : ["need", "unit", "pack"]);
+G["2-1"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["need", "unit"] : ["need", "unit", "pack"]);
   if (kind === "need") {
     const ans = pick(SITUATIONS.volume);
     const wrong = shuffle([...SITUATIONS.area.map(s => [s, "That covers a flat surface, so you measure AREA (square units), not volume."]),
@@ -920,8 +946,8 @@ G["2-1"] = t => {
 };
 
 /* ---- 2-2 Use Unit Cubes to Determine Volume ---- */
-G["2-2"] = t => {
-  const kind = t === 1 ? "count" : pick(t === 2 ? ["count", "layers"] : ["count", "layers", "howMany"]);
+G["2-2"] = (t, force) => {
+  const kind = force || (t === 1 ? "count" : pick(t === 2 ? ["count", "layers"] : ["count", "layers", "howMany"]));
   if (kind === "count") {
     const [mL, mW, mH] = [[3, 3, 2], [4, 3, 3], [5, 4, 4]][t - 1];
     const l = R(2, mL), w = R(2, mW), h = R(2, mH), v = l * w * h;
@@ -952,8 +978,8 @@ G["2-2"] = t => {
 
 /* ---- 2-3 Use Formulas to Determine Volume ---- */
 const OBJECTS = [["A freezer", "ft"], ["A gift box", "in"], ["A fish tank", "in"], ["A drawer", "cm"], ["A storage room", "m"], ["A toy chest", "in"]];
-G["2-3"] = t => {
-  const kind = t === 1 ? "lwh" : pick(t === 2 ? ["lwh", "Bh"] : ["Bh", "story", "lwh"]);
+G["2-3"] = (t, force) => {
+  const kind = force || (t === 1 ? "lwh" : pick(t === 2 ? ["lwh", "Bh"] : ["Bh", "story", "lwh"]));
   const surface = (l, w, h) => 2 * (l * w + l * h + w * h);
   if (kind === "lwh" || kind === "story") {
     const l = R(2, t === 1 ? 6 : 12), w = R(2, t === 1 ? 5 : 9), h = R(2, t === 1 ? 5 : 10), v = l * w * h;
@@ -975,7 +1001,7 @@ G["2-3"] = t => {
 };
 
 /* ---- 2-4 Determine the Volume of Composite Figures ---- */
-G["2-4"] = t => {
+G["2-4"] = (t, force) => {
   const w = R(2, t === 1 ? 3 : 5), a1 = R(2, 5), a2 = R(2, 5), h1 = R(3, t === 1 ? 4 : 7);
   let h2; do { h2 = R(1, t === 1 ? 3 : 5); } while (h2 === h1);
   const u = pick(["cm", "in", "ft", "m"]), vA = a1 * w * h1, vB = a2 * w * h2, v = vA + vB;
@@ -988,8 +1014,8 @@ G["2-4"] = t => {
 };
 
 /* ---- 2-5 Solve Problems Involving Volume ---- */
-G["2-5"] = t => {
-  const kind = pick(t === 1 ? ["height", "base"] : ["height", "base", "diff"]);
+G["2-5"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["height", "base"] : ["height", "base", "diff"]);
   const u = pick(["cm", "in", "ft"]);
   if (kind === "height") {
     const l = R(2, 9), w = R(2, 8), h = R(2, t === 1 ? 6 : 12), v = l * w * h;
@@ -1033,8 +1059,8 @@ function relQ(lesson, text, from, to, nameFrom, nameTo, values) {
     [`Find the place of each digit: ${nameFrom} and ${nameTo}.`, "Moving one place to the left makes a digit 10 times as much.", "Moving one place to the right makes it 1 tenth as much.", "Count how many places apart they are, and in which direction."], x => x);
   q.meta = { kind: "rel", key }; return q;
 }
-G["3-1"] = t => {
-  const kind = pick(t === 1 ? ["value", "rel"] : ["value", "rel", "two"]);
+G["3-1"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["value", "rel"] : ["value", "rel", "two"]);
   if (kind === "value") {
     for (;;) {
       const len = [5, 6, 7][t - 1], n = randN(len), d = digitsOf(n), p = R(2, len - 1), x = d[p];
@@ -1055,7 +1081,7 @@ G["3-1"] = t => {
     return relQ("3-1", `In ${fmt(n)}, the value of the ${x} in the <b>${PLACE[from]}</b> place is ___ the value of the ${x} in the <b>${PLACE[to]}</b> place.`, from, to, PLACE[from], PLACE[to], `${fmt(x * P10(from))} and ${fmt(x * P10(to))}.`);
   }
   const x = R(2, 9), pA = R(1, 3), gap = pick([1, 2]), up = Math.random() < .5, pB = up ? pA - gap : pA + gap;
-  if (pB < 0) return G["3-1"](t);
+  if (pB < 0) return G["3-1"](t, force);
   const withDigit = (len, pos) => { for (;;) { const d = digitsOf(randN(len)); d[pos] = x; if (d.filter(v => v === x).length === 1 && d[len - 1]) return fromDigits(d); } };
   const a = withDigit(Math.max(pA + 1, R(3, 5)), pA), b = withDigit(Math.max(pB + 1, R(3, 5)), pB);
   return relQ("3-1", `The ${x} in ${fmt(a)} is ___ the value of the ${x} in ${fmt(b)}.`, pA, pB, `${PLACE[pA]} (${fmt(x * P10(pA))})`, `${PLACE[pB]} (${fmt(x * P10(pB))})`, `${fmt(x * P10(pA))} and ${fmt(x * P10(pB))}.`);
@@ -1073,8 +1099,8 @@ function decNumber(withTens) {                 // distinct digits, 3 decimal pla
     return dig;
   }
 }
-G["3-2"] = t => {
-  const kind = pick(t === 1 ? ["dvalue", "dplace"] : ["dvalue", "drel", "dplace"]);
+G["3-2"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["dvalue", "dplace"] : ["dvalue", "drel", "dplace"]);
   if (kind === "dvalue" || kind === "dplace") {
     const dig = decNumber(t > 1), [m] = decFrom(dig), text = fmtDec(m, 3);
     const pos = pick(t === 1 ? [-1, -2] : [-1, -2, -3]), x = dig[pos];
@@ -1100,7 +1126,7 @@ G["3-2"] = t => {
   const dig = decNumber(true);
   for (const p in dig) if (dig[p] === x) dig[p] = (x % 9) + 1;
   dig[lo] = x; dig[hi] = x;
-  if (Object.values(dig).filter(v => v === x).length !== 2) return G["3-2"](t);
+  if (Object.values(dig).filter(v => v === x).length !== 2) return G["3-2"](t, force);
   const [m] = decFrom(dig), text = fmtDec(m, 3).replace(/^0\./, "0.");
   const up = Math.random() < .5, from = up ? hi : lo, to = up ? lo : hi;
   return relQ("3-2", `In ${text}, the ${x} in the <b>${POS[from]}</b> place is ___ the value of the ${x} in the <b>${POS[to]}</b> place.`, from, to, POS[from], POS[to], `${posVal(x, from)} and ${posVal(x, to)}.`);
@@ -1121,8 +1147,8 @@ function randDec(t) {
   let f; do { f = R(1, P10(p) - 1); } while (f % 10 === 0);   // last decimal digit never 0 (no trailing zeros)
   return [w * 1000 + f * P10(3 - p), p];
 }
-G["3-3"] = t => {
-  const kind = pick(t === 1 ? ["wordTo", "expanded"] : ["wordTo", "toWord", "expanded"]);
+G["3-3"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["wordTo", "expanded"] : ["wordTo", "toWord", "expanded"]);
   const [m, p] = randDec(t), text = fmtDec(m, p);
   if (kind === "wordTo") {
     const q = makeQ("3-3", `Which number is <i>${decWords(m, p)}</i>?`, text, decSlips(m, p),
@@ -1161,8 +1187,8 @@ const why34 = (a, b) => {
   for (let i = 0; i < sa.length; i++) if (sa[i] !== sb[i]) { const pl = sa.length - sa.indexOf(".") > 0 && i > sa.indexOf(".") ? DPLACE[i - sa.indexOf(".")] : "whole-number part"; return `Line up the decimal points${a[1] !== b[1] ? ` (write ${fmtDec(a[0], a[1])} as ${sa} and ${fmtDec(b[0], b[1])} as ${sb})` : ""}. The first different place is the ${pl}: ${sa[i]} ${decCmp(+sa[i], +sb[i])} ${sb[i]}.`; }
   return `They are equal: ${fmtDec(a[0], a[1])} = ${fmtDec(b[0], b[1])}. Zeros at the end of a decimal do not change its value.`;
 };
-G["3-4"] = t => {
-  const kind = pick(t === 1 ? ["true", "most"] : ["true", "most", "order"]);
+G["3-4"] = (t, force) => {
+  const kind = force || pick(t === 1 ? ["true", "most"] : ["true", "most", "order"]);
   const W = t === 1 ? R(0, 9) : R(1, 99);
   if (kind === "true") {
     const pair = () => {
@@ -1209,26 +1235,65 @@ GRADES["5"] = {
     ["3-3", "Read and Write Decimals"],
     ["3-4", "Compare Decimals"],
   ],
+  skills: [
+    ["2-1:need", "Understanding volume", "When do you measure volume?"],
+    ["2-1:unit", "Understanding volume", "Units of volume"],
+    ["2-1:pack", "Understanding volume", "Filling with unit cubes"],
+    ["2-2:count", "Unit cubes", "Count the unit cubes"],
+    ["2-2:layers", "Unit cubes", "Layers \u00d7 cubes in each layer"],
+    ["2-2:howMany", "Unit cubes", "How many layers?"],
+    ["2-3:lwh", "Volume formulas", "V = l \u00d7 w \u00d7 h (picture)"],
+    ["2-3:story", "Volume formulas", "V = l \u00d7 w \u00d7 h (word problem)"],
+    ["2-3:Bh", "Volume formulas", "V = B \u00d7 h"],
+    ["2-4:composite", "Volume formulas", "Composite figures"],
+    ["2-5:height", "Volume problems", "Find a missing edge length"],
+    ["2-5:base", "Volume problems", "Find the height from the base area"],
+    ["2-5:diff", "Volume problems", "Compare two volumes"],
+    ["3-1:value", "Place value", "Value of a digit in large numbers"],
+    ["3-1:rel", "Place value", "10 times or one tenth (same number)"],
+    ["3-1:two", "Place value", "10 times or one tenth (two numbers)"],
+    ["3-2:dvalue", "Decimal place value", "Value of a decimal digit"],
+    ["3-2:dplace", "Decimal place value", "Name the decimal place"],
+    ["3-2:drel", "Decimal place value", "Tenths, hundredths, thousandths: 10 times or one tenth"],
+    ["3-3:wordTo", "Reading and writing decimals", "Decimal word form to standard form"],
+    ["3-3:toWord", "Reading and writing decimals", "Standard form to decimal word form"],
+    ["3-3:expanded", "Reading and writing decimals", "Decimal expanded form"],
+    ["3-4:true", "Comparing decimals", "Compare decimals with >, < and ="],
+    ["3-4:most", "Comparing decimals", "Greatest or least decimal"],
+    ["3-4:order", "Comparing decimals", "Order decimals"],
+  ].map(([id, topic, name]) => ({ id, topic, name })),
   gen: G,
 };
 })();
 
 /* ================= rounds ================= */
-// 15 questions, easy \u2192 hard (tier 1 = Q1\u20135, 2 = Q6\u201310, 3 = Q11\u201315), no lesson twice in a row.
-function makeRound(grade, lessons) {
-  const G = GRADES[grade].gen, qs = []; let bag = [], last = null;
+// A "pool" is what the player chose: lesson codes ("2-2") or skill ids ("2-2:wordTo"), never both.
+function genFrom(grade, id, tier) {
+  const [lesson, kind] = id.split(":");
+  const q = GRADES[grade].gen[lesson](tier, kind);
+  if (kind) q.skill = (GRADES[grade].skills.find(s => s.id === id) || {}).name;
+  return q;
+}
+// 15 questions, easy \u2192 hard (tier 1 = Q1\u20135, 2 = Q6\u201310, 3 = Q11\u201315), nothing twice in a row when there is a choice.
+function makeRound(grade, pool) {
+  const qs = []; let bag = [], last = null;
   for (let i = 0; i < 15; i++) {
-    if (!bag.length) bag = shuffle(lessons);
+    if (!bag.length) bag = shuffle(pool);
     let k = bag.findIndex(l => l !== last); if (k < 0) k = 0;
     const l = bag.splice(k, 1)[0]; last = l;
-    qs.push(G[l](i < 5 ? 1 : i < 10 ? 2 : 3));
+    qs.push(genFrom(grade, l, i < 5 ? 1 : i < 10 ? 2 : 3));
   }
   return qs;
 }
-// "Switch the question" lifeline: a new question of the same level, from another chosen lesson if possible.
-function switchQuestion(grade, old, qi, lessons) {
-  const others = lessons.filter(l => l !== old.lesson);
-  return GRADES[grade].gen[pick(others.length ? others : lessons)](qi < 5 ? 1 : qi < 10 ? 2 : 3);
+// "Switch the question" lifeline: a new question of the same level, from another lesson if possible.
+function switchQuestion(grade, old, qi, pool) {
+  const others = pool.filter(id => id.split(":")[0] !== old.lesson);
+  return genFrom(grade, pick(others.length ? others : pool), qi < 5 ? 1 : qi < 10 ? 2 : 3);
+}
+// Valid pool for a grade from saved choices (drops anything the engine no longer has).
+function cleanPool(grade, ids) {
+  const G = GRADES[grade];
+  return (ids || []).filter(id => { const [l, k] = id.split(":"); return G.gen[l] && (!k || G.skills.some(s => s.id === id)); });
 }
 
 
@@ -1243,7 +1308,7 @@ function save2(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch
 function load2(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }
 function load(k, d) { try { const v = localStorage.getItem("mm4_" + k); return v ? JSON.parse(v) : d; } catch { return d; } }
 function save(k, v) { try { localStorage.setItem("mm4_" + k, JSON.stringify(v)); } catch {} }
-function saveSettings() { save("settings", { grade: S.grade, lessonsBy: S.lessonsBy, time: S.time, sound: S.sound, n: S.crews.length, mode: S.mode }); }
+function saveSettings() { save("settings", { grade: S.grade, time: S.time, sound: S.sound, n: S.crews.length, mode: S.mode }); }
 
 function show(id) { ["scrSetup", "scrIntro", "scrGame", "scrEnd"].forEach(s => ($(s).hidden = s !== id)); S.screen = id; }
 const OVERLAYS = ["ovClass", "ovFriend", "ovCoach", "ovAi", "ovHelp", "ovScores", "drawer"];
@@ -1311,7 +1376,11 @@ $("btnStart").addEventListener("click", () => {
 // Grades in menu order; the ones the engine has are playable, the rest show "Coming soon".
 const GRADE_ORDER = [["KG", "KG"], ["1", "Grade 1"], ["2", "Grade 2"], ["3", "Grade 3"], ["4", "Grade 4"], ["5", "Grade 5"], ["6", "Grade 6"]];
 const LESSONS_OF = g => GRADES[g].lessons;
-const cur = () => S.lessonsBy[S.grade];
+// lesson or skill choice per grade, shared with every game in the app (edu_by_/edu_lessons_/edu_skills_ keys)
+const byOf = g => (load2("edu_by_" + g, "lesson") === "skill" ? "skill" : "lesson");
+const chosenOf = g => cleanPool(g, load2(byOf(g) === "skill" ? "edu_skills_" + g : "edu_lessons_" + g, null));
+const allOf = g => (byOf(g) === "skill" ? GRADES[g].skills.map(x => x.id) : GRADES[g].lessons.map(l => l[0]));
+const cur = () => { const c = chosenOf(S.grade); return c.length ? c : allOf(S.grade); };
 let gradeOpen = true;
 const SUB = $("subGrade");          // the lessons panel; moved under the chosen grade on every redraw
 function renderGradeMenu() {
@@ -1327,24 +1396,29 @@ function renderGradeMenu() {
   SUB.hidden = !gradeOpen;
 }
 function renderLessons() {
-  const L = LESSONS_OF(S.grade);
-  $("lessonsHead").textContent = `${GRADES[S.grade].name} lessons`;
-  $("lessonList").innerHTML = L.map(([c, n]) => `<label class="chk"><input type="checkbox" id="les${c}" ${cur().includes(c) ? "checked" : ""}><span><span class="tag">${c}</span>${n}</span></label>`).join("");
-  L.forEach(([c]) => $("les" + c).addEventListener("change", () => setLessons(L.map(([x]) => x).filter(x => $("les" + x).checked))));
+  const g = S.grade, mode = byOf(g), picked = chosenOf(g);
+  $("lessonsHead").innerHTML = `<div class="seg2" role="group" aria-label="Choose by"><button data-by="lesson" aria-pressed="${mode === "lesson"}">By lesson</button><button data-by="skill" aria-pressed="${mode === "skill"}">By skill</button></div><b style="font-family:var(--display);font-size:14px">${mode === "skill" ? "Skills" : "Lessons"}</b>`;
+  const box = (val, label) => `<label class="chk"><input type="checkbox" data-c="${val}" ${picked.includes(val) ? "checked" : ""}><span>${label}</span></label>`;
+  $("lessonList").innerHTML = mode === "lesson"
+    ? LESSONS_OF(g).map(([c, n]) => box(c, `<span class="tag">${c}</span>${n}`)).join("")
+    : [...new Set(GRADES[g].skills.map(x => x.topic))].map(tp => `<div class="topic">${tp}</div>` + GRADES[g].skills.filter(x => x.topic === tp).map(x => box(x.id, `${x.name} <small class="lref">${x.id.split(":")[0]}</small>`)).join("")).join("");
+  $("lessonsHead").querySelectorAll("button[data-by]").forEach(b => b.addEventListener("click", () => { save2("edu_by_" + g, b.dataset.by); renderLessons(); }));
+  $("lessonList").querySelectorAll("input[data-c]").forEach(i => i.addEventListener("change", () => setLessons([...$("lessonList").querySelectorAll("input[data-c]:checked")].map(x => x.dataset.c))));
   renderGradeMenu(); lessonSummary();
 }
 function setLessons(list) {
-  S.lessonsBy[S.grade] = list;
-  LESSONS_OF(S.grade).forEach(([c]) => ($("les" + c).checked = list.includes(c)));
-  lessonSummary(); saveSettings();
+  save2((byOf(S.grade) === "skill" ? "edu_skills_" : "edu_lessons_") + S.grade, list);
+  renderLessons();
 }
 function lessonSummary() {
-  const n = cur().length, all = LESSONS_OF(S.grade).length, name = GRADES[S.grade].name;
-  $("lessonSum").textContent = n === all ? `${name} \u00b7 all ${n} lessons` : n ? `${name} \u00b7 ${n} of ${all} lessons: ${cur().join(", ")}` : `${name} \u00b7 no lessons chosen`;
-  $("btnStart").disabled = !n;
-  $("lessonNote").textContent = n ? "Changes start with the next round." : "Choose at least one lesson.";
+  const g = S.grade, name = GRADES[g].name, c = chosenOf(g), all = allOf(g), mode = byOf(g);
+  if (mode === "skill") {
+    const names = c.map(id => GRADES[g].skills.find(x => x.id === id).name);
+    $("lessonSum").textContent = !c.length || c.length === all.length ? `${name} \u00b7 all ${all.length} skills` : `${name} \u00b7 ${c.length} skill${c.length > 1 ? "s" : ""}: ${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2} more` : ""}`;
+  } else $("lessonSum").textContent = !c.length || c.length === all.length ? `${name} \u00b7 all ${all.length} lessons` : `${name} \u00b7 ${c.length} of ${all.length} lessons: ${c.join(", ")}`;
+  $("lessonNote").textContent = c.length ? "Changes start with the next round." : `Nothing ticked: every ${mode} is used.`;
 }
-$("lesAll").addEventListener("click", () => setLessons(LESSONS_OF(S.grade).map(([c]) => c)));
+$("lesAll").addEventListener("click", () => setLessons(allOf(S.grade)));
 $("lesNone").addEventListener("click", () => setLessons([]));
 function openMenu(focusLessons) {
   $("drawer").hidden = false; $("scrim").hidden = false; $("btnMenu").setAttribute("aria-expanded", "true");
@@ -1394,7 +1468,7 @@ function renderQ() {
   const q = S.qs[S.qi];
   S.sel = -1; S.locked = false; S.hidden = [];
   $("gCrew").textContent = S.teams[S.crew].name;
-  $("gChip").textContent = `Question ${S.qi + 1} \u00b7 ${GRADES[S.roundGrade].name} \u00b7 Lesson ${q.lesson}`;
+  $("gChip").textContent = `Question ${S.qi + 1} \u00b7 ${GRADES[S.roundGrade].name} \u00b7 Lesson ${q.lesson}${q.skill ? " \u00b7 " + q.skill : ""}`;
   $("qText").innerHTML = `<span>${q.text}</span>`;   // one inline box, so spaces around <b>/<i> survive the flex layout
   $("answers").innerHTML = q.options.map((o, i) => `<button class="lz ans" id="opt${i}"><span class="in"><span class="let">${"ABCD"[i]}:</span><span>${o}</span></span></button>`).join("");
   q.options.forEach((_, i) => $("opt" + i).addEventListener("click", () => choose(i)));
@@ -1595,13 +1669,12 @@ function confetti() {
 function start(data) {
   const st = load("settings", {}), names = load("names", []);
   const n = st.n || 4;
-  S = data && data.S && data.S.lessonsBy ? data.S : {
+  S = data && data.S && data.S.grade && !data.S.lessonsBy ? data.S : {
     mode: st.mode === "home" ? "home" : "class",
     crews: Array.from({ length: n }, (_, i) => ({ name: names[i] || `Crew ${i + 1}`, score: 0, rounds: 0 })),
     player: { name: load("player", "Player"), score: 0, rounds: 0 },
     teams: null,
     grade: GRADES[load2("edu_grade", null)] ? load2("edu_grade", null) : GRADES[st.grade] ? st.grade : "4",
-    lessonsBy: Object.fromEntries(Object.keys(GRADES).map(g => { const saved = ((st.lessonsBy || {})[g] || (g === "4" ? st.lessons : null) || []).filter(c => GRADES[g].gen[c]); return [g, saved.length ? saved : GRADES[g].lessons.map(l => l[0])]; })),
     time: st.time || "level", sound: st.sound !== false, round: 0, screen: "scrSetup",
   };
   if (window.HUB_URL) { $("mHome").href = window.HUB_URL; $("mHome").hidden = false; }
