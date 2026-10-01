@@ -2,25 +2,220 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Math Games</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#051C54">
+<meta name="description" content="Learning games for KG to Grade 6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Math Games">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Math Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Cairo:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--deep:#020B26;--stage:#051C54;--silver:#C9D3EA;--gold:#FCA500}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse 70% 70% at 50% 30%,#1B3F8F,var(--stage) 60%,var(--deep));color:#fff;
-  font-family:"Arial Rounded MT Bold","Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;padding:40px 16px;box-sizing:border-box;gap:24px}
-h1{color:var(--gold);margin:0;font-size:clamp(30px,6vw,56px)}
-p{color:var(--silver);margin:0}
-a.game{display:flex;align-items:center;gap:16px;background:rgba(2,11,38,.6);border:2px solid var(--silver);border-radius:16px;padding:14px 22px;color:#fff;text-decoration:none;width:min(460px,100%);box-sizing:border-box}
-a.game:hover,a.game:focus-visible{border-color:var(--gold)}
-a.game img{width:64px;height:64px;border-radius:14px}
-a.game b{display:block;font-size:22px}
-a.game span{color:var(--silver);font-family:"Segoe UI",sans-serif;font-size:14px}
+/* Layout: an app home screen &#x2014; brand bar, grade chips, then a grid of game cards (playable first, "coming soon" after).
+   Same night-sky navy and gold as the games, so moving between the hub and a game feels like one app. */
+:root{
+  --deep:#020B26; --stage:#051C54; --panel:#0B2563; --silver:#C9D3EA; --muted:#8C9AC0;
+  --gold:#FCA500; --gold-dark:#8A5A00; --teal:#108CB5; --green:#2F9E6E; --coral:#ED4667; --ink:#051C54;
+  --display:"Nunito","Arial Rounded MT Bold","Segoe UI",sans-serif;
+  --body:"Segoe UI","Nunito",Tahoma,sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--deep);color:#fff;font-family:var(--body)}
+html[dir="rtl"] body{--display:"Cairo","Nunito",sans-serif;--body:"Cairo","Segoe UI",sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.app{min-height:100%;position:relative;overflow-x:hidden;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,#1B3F8F 0%,#0A2466 40%,var(--stage) 70%,var(--deep) 100%);
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.rays{position:absolute;inset:0 0 auto 0;height:520px;pointer-events:none;
+  background:repeating-conic-gradient(from 0deg at 50% -10%,rgba(255,255,255,.035) 0 5deg,transparent 5deg 12deg);
+  -webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+.wrap{position:relative;max-width:1180px;margin:0 auto;padding-block:16px 40px;padding-inline:16px;display:flex;flex-direction:column;gap:22px}
+
+/* brand bar */
+.bar{display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo img{width:46px;height:46px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.logo b{font-family:"Nunito",sans-serif;font-weight:900;font-size:26px;color:var(--gold);letter-spacing:.01em}
+.logo span{font-family:"Cairo",sans-serif;font-weight:800;font-size:20px;color:#fff}
+.spacer{flex:1}
+.lang{display:flex;border:1.5px solid rgba(201,211,234,.5);border-radius:99px;overflow:hidden}
+.lang button{background:transparent;border:0;padding:6px 14px;font-size:14px;font-family:var(--display)}
+.lang button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:6px;padding-block:6px}
+.hero h1{margin:0;font-family:var(--display);font-weight:900;font-size:clamp(28px,4.6vw,52px);line-height:1.1;text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero p{margin:0;color:var(--silver);font-size:clamp(15px,1.6vw,19px);max-width:60ch}
+
+/* grade chips */
+.grades{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grades .lbl{font-family:var(--display);color:var(--muted);font-size:14px;margin-inline-end:4px}
+.chip{border:1.5px solid rgba(201,211,234,.45);background:rgba(2,11,38,.45);border-radius:99px;padding:7px 16px;font-family:var(--display);font-size:15px;font-variant-numeric:tabular-nums}
+.chip:hover{border-color:var(--gold)}
+.chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+
+/* game cards */
+.section-title{display:flex;align-items:baseline;gap:10px;margin:6px 0 -6px}
+.section-title h2{margin:0;font-family:var(--display);font-size:20px}
+.section-title span{color:var(--muted);font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;text-decoration:none;
+  background:linear-gradient(180deg,rgba(27,63,143,.55),rgba(5,28,84,.75));border:1.5px solid rgba(201,211,234,.28);border-radius:20px;padding:16px;transition:transform .15s,border-color .15s}
+a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
+.card.soon{background:rgba(2,11,38,.45);border-style:dashed}
+.art{height:120px;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#1B3F8F,var(--stage) 70%)}
+.card.soon .art{filter:saturate(.55);opacity:.8}
+.art svg{width:100%;height:100%;direction:ltr}
+.card h3{margin:0;font-family:var(--display);font-size:19px;line-height:1.25}
+.card p{margin:0;color:var(--silver);font-size:14px;line-height:1.5}
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.tag{font-size:12px;font-family:var(--display);border-radius:99px;padding:3px 10px;background:rgba(16,140,181,.25);color:#BFE9F7}
+.tag.play{background:var(--gold);color:var(--ink)}
+.tag.soonT{background:rgba(201,211,234,.15);color:var(--silver)}
+.empty{color:var(--muted);font-size:15px;padding:8px 0}
+
+.foot{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;color:var(--muted);font-size:13px;border-top:1px solid rgba(201,211,234,.15);padding-top:14px}
+.foot button{background:none;border:0;color:var(--gold);text-decoration:underline;padding:0;font-size:13px}
+
+.overlay{position:fixed;inset:0;background:rgba(2,11,38,.82);display:grid;place-items:center;padding:16px;z-index:20}
+.modal{background:var(--stage);border:2px solid var(--silver);border-radius:18px;padding:20px 22px;width:min(560px,100%);box-sizing:border-box}
+.modal h3{margin:0 0 10px;font-family:var(--display);color:var(--gold)}
+.modal ol{margin:0 0 6px;padding-inline-start:1.3em;line-height:1.7}
+.modal .btn{margin-top:10px;background:var(--gold);color:var(--ink);border:0;border-radius:99px;padding:8px 22px;font-family:var(--display)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<h1>Math Games</h1>
-<p>Classroom review games</p>
-<a class="game" href="grade4-millionaire/"><img src="grade4-millionaire/icon-192.png" alt=""><span><b>Math Millionaire</b>Grades 4 and 5</span></a>
+
+<div class="app">
+  <div class="rays"></div>
+  <div class="wrap">
+    <header class="bar">
+      <a class="logo" href="./" aria-label="Math Games"><img src="icon-192.png" alt=""><b>Math Games</b><span>&#x623;&#x644;&#x639;&#x627;&#x628; &#x627;&#x644;&#x631;&#x64a;&#x627;&#x636;&#x64a;&#x627;&#x62a;</span></a>
+      <span class="spacer"></span>
+      <div class="lang" role="group" aria-label="Language">
+        <button id="lEn" aria-pressed="true">English</button><button id="lAr" aria-pressed="false">&#x639;&#x631;&#x628;&#x64a;</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <h1 id="hTitle"></h1>
+      <p id="hSub"></p>
+    </section>
+
+    <div class="grades" id="grades"></div>
+
+    <div class="section-title"><h2 id="tPlay"></h2><span id="tPlayN"></span></div>
+    <div class="cards" id="cardsPlay"></div>
+    <div class="section-title"><h2 id="tSoon"></h2><span id="tSoonN"></span></div>
+    <div class="cards" id="cardsSoon"></div>
+
+    <footer class="foot">
+      <span id="fLeft"></span>
+      <button id="fHow"></button>
+    </footer>
+  </div>
+</div>
+
+<div class="overlay" id="ovHow" hidden>
+  <div class="modal">
+    <h3 id="howTitle"></h3>
+    <ol id="howSteps"></ol>
+    <button class="btn" id="howClose"></button>
+  </div>
+</div>
+
+<script>
+const BRAND = { en: "Math Games", ar: "\u0623\u0644\u0639\u0627\u0628 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0627\u062a" };
+const T = {
+  en: { title: `Learn by <em>playing</em>`, sub: "Learning games for KG to Grade 6 \u2014 new questions every round, explanations for every mistake, in class or at home.",
+        grade: "Grade", all: "All", play: "Play now", soon: "Coming soon", games: n => `${n} game${n === 1 ? "" : "s"}`,
+        none: "No games for this grade yet. They are on the way.", grades: g => g.length > 1 ? `Grades ${g.at(0)}\u2013${g.at(-1)}` : g[0] === "KG" ? "KG" : `Grade ${g[0]}`,
+        foot: `${BRAND.en} \u00b7 works offline after the first visit`, how: "Add to your home screen",
+        howSteps: ["iPad / iPhone: open this page in Safari, tap Share, then Add to Home Screen.", "Android: open it in Chrome, tap the menu \u22ee, then Add to Home screen or Install app.", "The app opens full screen and updates itself when you are online."], close: "Close" },
+  ar: { title: `\u062a\u0639\u0644\u0651\u0645 \u0648\u0623\u0646\u062a <em>\u062a\u0644\u0639\u0628</em>`, sub: "\u0623\u0644\u0639\u0627\u0628 \u062a\u0639\u0644\u064a\u0645\u064a\u0629 \u0645\u0646 \u0627\u0644\u0631\u0648\u0636\u0629 \u062d\u062a\u0649 \u0627\u0644\u0635\u0641 \u0627\u0644\u0633\u0627\u062f\u0633 \u2014 \u0623\u0633\u0626\u0644\u0629 \u062c\u062f\u064a\u062f\u0629 \u0641\u064a \u0643\u0644 \u062c\u0648\u0644\u0629\u060c \u0648\u0634\u0631\u062d \u0644\u0643\u0644 \u062e\u0637\u0623\u060c \u0641\u064a \u0627\u0644\u0641\u0635\u0644 \u0623\u0648 \u0641\u064a \u0627\u0644\u0628\u064a\u062a.",
+        grade: "\u0627\u0644\u0635\u0641", all: "\u0627\u0644\u0643\u0644", play: "\u0627\u0644\u0639\u0628 \u0627\u0644\u0622\u0646", soon: "\u0642\u0631\u064a\u0628\u064b\u0627", games: n => n === 1 ? "\u0644\u0639\u0628\u0629 \u0648\u0627\u062d\u062f\u0629" : n === 2 ? "\u0644\u0639\u0628\u062a\u0627\u0646" : `${n} \u0623\u0644\u0639\u0627\u0628`,
+        none: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0623\u0644\u0639\u0627\u0628 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0641 \u0628\u0639\u062f\u060c \u0648\u0647\u064a \u0641\u064a \u0627\u0644\u0637\u0631\u064a\u0642.", grades: g => { const n = x => x === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : x; return g.length > 1 ? `\u0645\u0646 ${n(g.at(0))} \u0625\u0644\u0649 ${n(g.at(-1))}` : g[0] === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : `\u0627\u0644\u0635\u0641 ${g[0]}`; },
+        foot: `${BRAND.ar} \u00b7 \u062a\u0639\u0645\u0644 \u0628\u062f\u0648\u0646 \u0625\u0646\u062a\u0631\u0646\u062a \u0628\u0639\u062f \u0623\u0648\u0644 \u0632\u064a\u0627\u0631\u0629`, how: "\u0623\u0636\u0650\u0641\u0647 \u0625\u0644\u0649 \u0627\u0644\u0634\u0627\u0634\u0629 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629",
+        howSteps: ["\u0622\u064a\u0628\u0627\u062f / \u0622\u064a\u0641\u0648\u0646: \u0627\u0641\u062a\u062d \u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u062d\u0629 \u0641\u064a Safari\u060c \u0648\u0627\u0636\u063a\u0637 \u0645\u0634\u0627\u0631\u0643\u0629\u060c \u062b\u0645 Add to Home Screen.", "\u0623\u0646\u062f\u0631\u0648\u064a\u062f: \u0627\u0641\u062a\u062d\u0647\u0627 \u0641\u064a Chrome\u060c \u0648\u0627\u0636\u063a\u0637 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u22ee\u060c \u062b\u0645 Add to Home screen \u0623\u0648 Install app.", "\u064a\u0641\u062a\u062d \u0627\u0644\u062a\u0637\u0628\u064a\u0642 \u0628\u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629 \u0648\u064a\u062a\u062d\u062f\u0651\u062b \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627 \u0639\u0646\u062f \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a."], close: "\u0625\u063a\u0644\u0627\u0642" },
+};
+const GRADES = ["KG", "1", "2", "3", "4", "5", "6"];
+// The catalogue: ready games link to their folder; the rest are on the roadmap.
+const GAMES = [
+  { id: "millionaire", href: "millionaire/", ready: true, grades: ["4", "5"], subject: { en: "Math", ar: "\u0631\u064a\u0627\u0636\u064a\u0627\u062a" },
+    en: ["Math Millionaire", "Climb a 15-step prize ladder with lifelines. Play in class with crews or at home with AI helpers."],
+    ar: ["\u0645\u0644\u064a\u0648\u0646\u064a\u0631 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0627\u062a", "\u0627\u0635\u0639\u062f \u0633\u0644\u0651\u0645 \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0643\u0648\u0651\u0646 \u0645\u0646 15 \u062f\u0631\u062c\u0629 \u0628\u0648\u0633\u0627\u0626\u0644 \u0627\u0644\u0645\u0633\u0627\u0639\u062f\u0629. \u0627\u0644\u0639\u0628 \u0641\u064a \u0627\u0644\u0641\u0635\u0644 \u0645\u0639 \u0627\u0644\u0641\u0631\u0642 \u0623\u0648 \u0641\u064a \u0627\u0644\u0628\u064a\u062a \u0645\u0639 \u0645\u0633\u0627\u0639\u062f\u064a AI."] },
+  { id: "race", href: "race/", ready: true, grades: ["4", "5"], subject: { en: "Math", ar: "\u0631\u064a\u0627\u0636\u064a\u0627\u062a" },
+    en: ["Team Race", "Every right answer moves your car forward. Race in class with up to 4 teams, or at home against the robot."],
+    ar: ["\u0633\u0628\u0627\u0642 \u0627\u0644\u0641\u0631\u0642", "\u0643\u0644 \u0625\u062c\u0627\u0628\u0629 \u0635\u062d\u064a\u062d\u0629 \u062a\u062d\u0631\u0651\u0643 \u0633\u064a\u0627\u0631\u062a\u0643 \u0644\u0644\u0623\u0645\u0627\u0645. \u0633\u0627\u0628\u0650\u0642 \u0641\u064a \u0627\u0644\u0641\u0635\u0644 \u062d\u062a\u0649 4 \u0641\u0631\u0642\u060c \u0623\u0648 \u0641\u064a \u0627\u0644\u0628\u064a\u062a \u0636\u062f \u0633\u064a\u0627\u0631\u0629 \u0627\u0644\u0631\u0648\u0628\u0648\u062a."] },
+  { id: "minute", href: "minute/", ready: true, grades: ["4", "5"], subject: { en: "Math", ar: "\u0631\u064a\u0627\u0636\u064a\u0627\u062a" },
+    en: ["Minute Challenge", "How many can you answer before the clock runs out? Beat your best, then review every mistake."],
+    ar: ["\u062a\u062d\u062f\u0651\u064a \u0627\u0644\u062f\u0642\u064a\u0642\u0629", "\u0643\u0645 \u0633\u0624\u0627\u0644\u064b\u0627 \u062a\u062c\u064a\u0628 \u0642\u0628\u0644 \u0627\u0646\u062a\u0647\u0627\u0621 \u0627\u0644\u0648\u0642\u062a\u061f \u062d\u0637\u0651\u0645 \u0631\u0642\u0645\u0643 \u0627\u0644\u0642\u064a\u0627\u0633\u064a \u062b\u0645 \u0631\u0627\u062c\u0639 \u0643\u0644 \u062e\u0637\u0623."] },
+  { id: "map", href: "map/", ready: true, grades: ["4", "5"], subject: { en: "Math", ar: "\u0631\u064a\u0627\u0636\u064a\u0627\u062a" },
+    en: ["Adventure Map", "One stop per lesson. Earn stars to open the next stop and reach the final challenge."],
+    ar: ["\u062e\u0631\u064a\u0637\u0629 \u0627\u0644\u0645\u063a\u0627\u0645\u0631\u0629", "\u0645\u062d\u0637\u0629 \u0644\u0643\u0644 \u062f\u0631\u0633. \u0627\u062c\u0645\u0639 \u0627\u0644\u0646\u062c\u0648\u0645 \u0644\u062a\u0641\u062a\u062d \u0627\u0644\u0645\u062d\u0637\u0629 \u0627\u0644\u062a\u0627\u0644\u064a\u0629 \u0648\u062a\u0635\u0644 \u0625\u0644\u0649 \u0627\u0644\u062a\u062d\u062f\u064a \u0627\u0644\u0646\u0647\u0627\u0626\u064a."] },
+  { id: "match", grades: ["KG", "1", "2"], subject: { en: "Math & English", ar: "\u0631\u064a\u0627\u0636\u064a\u0627\u062a \u0648\u0625\u0646\u062c\u0644\u064a\u0632\u064a" },
+    en: ["Match & Drag", "Drag numbers, pictures and words to the right place."],
+    ar: ["\u0637\u0627\u0628\u0642 \u0648\u0627\u0633\u062d\u0628", "\u0627\u0633\u062d\u0628 \u0627\u0644\u0623\u0639\u062f\u0627\u062f \u0648\u0627\u0644\u0635\u0648\u0631 \u0648\u0627\u0644\u0643\u0644\u0645\u0627\u062a \u0625\u0644\u0649 \u0645\u0643\u0627\u0646\u0647\u0627 \u0627\u0644\u0635\u062d\u064a\u062d."] },
+  { id: "count", grades: ["KG"], subject: { en: "Math", ar: "\u0631\u064a\u0627\u0636\u064a\u0627\u062a" },
+    en: ["Count & Tap", "Count the pictures and tap the number. Every question is read aloud."],
+    ar: ["\u0639\u064f\u062f\u0651 \u0648\u0627\u0644\u0645\u0633", "\u0639\u064f\u062f\u0651 \u0627\u0644\u0635\u0648\u0631 \u0648\u0627\u0644\u0645\u0633 \u0627\u0644\u0631\u0642\u0645. \u0643\u0644 \u0633\u0624\u0627\u0644 \u064a\u064f\u0642\u0631\u0623 \u0628\u0635\u0648\u062a."] },
+];
+// Original card art (shapes only).
+const ART = {
+  millionaire: `<svg viewBox="0 0 240 120"><defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#FFC94D"/><stop offset="1" stop-color="#E48F00"/></linearGradient></defs>${[0,1,2,3,4].map(i => `<rect x="${150 + i * 0}" y="${92 - i * 16}" width="${60 - i * 6}" height="12" rx="6" fill="${i === 4 ? "#FCA500" : "#C9D3EA"}" opacity="${i === 4 ? 1 : .35 + i * .1}"/>`).join("")}<text x="82" y="78" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="58" fill="url(#g1)" stroke="#8A5A00" stroke-width="2">1M</text></svg>`,
+  race: `<svg viewBox="0 0 240 120"><rect x="0" y="62" width="240" height="40" fill="#0A1A44"/><path d="M0 82h240" stroke="#C9D3EA" stroke-width="3" stroke-dasharray="14 12"/><rect x="198" y="40" width="6" height="62" fill="#C9D3EA"/>${[0,1,2,3].map(i => `<rect x="${204 + (i % 2) * 8}" y="${40 + Math.floor(i / 2) * 8}" width="8" height="8" fill="${(i + Math.floor(i / 2)) % 2 ? "#051C54" : "#fff"}"/>`).join("")}<g transform="translate(70 58)"><rect x="0" y="8" width="64" height="18" rx="7" fill="#ED4667"/><path d="M14 8l10-12h20l10 12z" fill="#ED4667"/><rect x="26" y="-1" width="14" height="9" rx="2" fill="#BFE9F7"/><circle cx="14" cy="27" r="7" fill="#020B26" stroke="#C9D3EA" stroke-width="2"/><circle cx="50" cy="27" r="7" fill="#020B26" stroke="#C9D3EA" stroke-width="2"/></g><path d="M44 66h18M36 74h22M46 82h14" stroke="#FCA500" stroke-width="3" stroke-linecap="round"/></svg>`,
+  minute: `<svg viewBox="0 0 240 120"><circle cx="120" cy="64" r="40" fill="#0A1A44" stroke="#C9D3EA" stroke-width="5"/><rect x="110" y="10" width="20" height="10" rx="3" fill="#C9D3EA"/><path d="M120 64V36" stroke="#FCA500" stroke-width="5" stroke-linecap="round"/><path d="M120 64l18 12" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M120 24a40 40 0 0 1 40 40h-40z" fill="#FCA500" opacity=".35"/><text x="190" y="72" font-family="Nunito,sans-serif" font-weight="900" font-size="26" fill="#FCA500">60</text></svg>`,
+  map: `<svg viewBox="0 0 240 120"><path d="M30 96C60 96 60 60 96 60s36 34 70 34 30-50 54-56" fill="none" stroke="#C9D3EA" stroke-width="4" stroke-dasharray="2 10" stroke-linecap="round"/>${[[30,96,1],[96,60,1],[166,94,0],[214,40,0]].map(([x,y,d]) => `<circle cx="${x}" cy="${y}" r="13" fill="${d ? "#2F9E6E" : "#0A1A44"}" stroke="${d ? "#5FE0A5" : "#C9D3EA"}" stroke-width="3"/>`).join("")}<path d="M214 30l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7-5.5-4.5 7-.5z" fill="#FCA500"/></svg>`,
+  match: `<svg viewBox="0 0 240 120"><rect x="36" y="24" width="60" height="60" rx="12" fill="#108CB5"/><text x="66" y="68" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="34" fill="#fff">3</text><rect x="144" y="24" width="60" height="60" rx="12" fill="none" stroke="#C9D3EA" stroke-width="3" stroke-dasharray="6 6"/>${[0,1,2].map(i => `<circle cx="${160 + i * 14}" cy="54" r="6" fill="#FCA500"/>`).join("")}<path d="M100 54h36" stroke="#FCA500" stroke-width="4" stroke-linecap="round"/><path d="M128 46l10 8-10 8" fill="none" stroke="#FCA500" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  count: `<svg viewBox="0 0 240 120">${[[60,40],[92,40],[124,40],[76,72],[108,72]].map(([x,y]) => `<circle cx="${x}" cy="${y}" r="13" fill="#ED4667"/><path d="M${x} ${y - 13}q4-8 9-6" stroke="#2F9E6E" stroke-width="3" fill="none"/>`).join("")}<rect x="160" y="30" width="54" height="54" rx="27" fill="#FCA500"/><text x="187" y="69" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="32" fill="#051C54">5</text></svg>`,
+};
+
+const $ = id => document.getElementById(id);
+function load(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+let lang = load("edu_lang", "en"), grade = load("edu_hubGrade", "all");
+
+function render() {
+  const t = T[lang];
+  document.documentElement.lang = lang; document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  $("lEn").setAttribute("aria-pressed", String(lang === "en")); $("lAr").setAttribute("aria-pressed", String(lang === "ar"));
+  $("hTitle").innerHTML = t.title; $("hSub").textContent = t.sub;
+  $("grades").innerHTML = `<span class="lbl">${t.grade}</span>` + [["all", t.all], ...GRADES.map(g => [g, lang === "ar" && g === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : g])]
+    .map(([g, label]) => `<button class="chip" data-g="${g}" aria-pressed="${grade === g}">${label}</button>`).join("");
+  const fits = gm => grade === "all" || gm.grades.includes(grade);
+  const card = gm => {
+    const [name, desc] = gm[lang];
+    const inner = `<div class="art">${ART[gm.id]}</div><h3>${name}</h3><p>${desc}</p><div class="meta"><span class="tag ${gm.ready ? "play" : "soonT"}">${gm.ready ? t.play : t.soon}</span><span class="tag">${gm.subject[lang]}</span><span class="tag">${t.grades(gm.grades)}</span></div>`;
+    return gm.ready ? `<a class="card" href="${gm.href}" data-id="${gm.id}">${inner}</a>` : `<div class="card soon">${inner}</div>`;
+  };
+  const ready = GAMES.filter(g => g.ready && fits(g)), soon = GAMES.filter(g => !g.ready && fits(g));
+  $("tPlay").textContent = t.play; $("tPlayN").textContent = t.games(ready.length);
+  $("cardsPlay").innerHTML = ready.length ? ready.map(card).join("") : `<div class="empty">${t.none}</div>`;
+  $("tSoon").textContent = t.soon; $("tSoonN").textContent = t.games(soon.length);
+  $("cardsSoon").innerHTML = soon.map(card).join("");
+  $("fLeft").textContent = t.foot; $("fHow").textContent = t.how;
+  $("howTitle").textContent = t.how; $("howSteps").innerHTML = t.howSteps.map(s => `<li>${s}</li>`).join(""); $("howClose").textContent = t.close;
+}
+$("grades").addEventListener("click", e => { const b = e.target.closest("button[data-g]"); if (!b) return; grade = b.dataset.g; save("edu_hubGrade", grade); if (grade !== "all") save("edu_grade", grade); render(); });
+$("lEn").addEventListener("click", () => { lang = "en"; save("edu_lang", lang); render(); });
+$("lAr").addEventListener("click", () => { lang = "ar"; save("edu_lang", lang); render(); });
+$("fHow").addEventListener("click", () => ($("ovHow").hidden = false));
+$("howClose").addEventListener("click", () => ($("ovHow").hidden = true));
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("ovHow").hidden = true; });
+render();
+</script>
+
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});</script>
 </body>
 </html>

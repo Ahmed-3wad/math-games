@@ -1,6 +1,7 @@
 {
-  "name": "Math Millionaire",
-  "short_name": "Millionaire",
+  "name": "Math Games",
+  "short_name": "Math Games",
+  "description": "Learning games for KG to Grade 6",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
