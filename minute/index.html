@@ -138,6 +138,8 @@ canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 .seg2 button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
 .lessons .topic{font-family:var(--display);color:var(--gold);font-size:12px;letter-spacing:.06em;margin:8px 0 2px;text-transform:uppercase}
 .lessons .lref{color:var(--muted);font-size:11px;margin-left:4px}
+.mwho{color:var(--silver);font-size:13px;margin:2px 4px 4px}
+.mwho b{color:var(--gold)}
 
 /* Minute Challenge: the clock is the hero &#x2014; a ring that drains, the score beside it, one question at a time. */
 .ring{position:relative;width:clamp(150px,20vw,230px);aspect-ratio:1;max-width:100%}
@@ -212,6 +214,197 @@ canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 
 <script>
 const IMG = {};
+window.EDU_BACKEND = { "url": "https://gihclosptgwzghthuxtv.supabase.co", "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpaGNsb3NwdGd3emdodGh1eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NTkwNDcsImV4cCI6MjEwNjQzNTA0N30.uMXopcrg4n5Pa5MRg9QvMFqFI5MdxBIqSk8b0u7Mit4" };
+/* ================= accounts, progress sync and usage stats (shared by the app home, every game and admin) ================= */
+// Two backends with the same calls:
+//   server \u2014 Supabase (window.EDU_BACKEND = { url, anonKey } from app/backend.json): works on any device, feeds the admin dashboard
+//   device \u2014 localStorage only, used until the server is configured (same screens; data stays on this device)
+const EDU = (() => {
+  const cfg = window.EDU_BACKEND || {};
+  const SERVER = !!(cfg.url && cfg.anonKey);
+  const rawSet = Storage.prototype.setItem, rawRemove = Storage.prototype.removeItem;
+  const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
+  const put = (k, v) => { try { rawSet.call(localStorage, k, JSON.stringify(v)); } catch {} };
+  const drop = k => { try { rawRemove.call(localStorage, k); } catch {} };
+  // what belongs to a player and travels with the account
+  const MINE = /^(edu_by_|edu_lessons_|edu_skills_|edu_grade$|edu_last$|map_progress_|minute_best_|minute_secs$|race_setup$|mm4_)/;
+  const myKeys = () => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MINE.test(k)) out.push(k); } } catch {} return out; };
+
+  let user = get("edu_user", null);          // { token, username, name, grade, role, device? }
+  let dirty = {}, saveTimer = null;           // progress keys waiting to be saved for the signed-in player
+
+  /* ---- server calls (Supabase RPC) ---- */
+  async function rpc(fn, args) {
+    const r = await fetch(`${cfg.url}/rest/v1/rpc/${fn}`, {
+      method: "POST", keepalive: fn === "log_events" || fn === "save_progress",
+      headers: { apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    const text = await r.text(), data = text ? JSON.parse(text) : null;
+    if (!r.ok) throw new Error((data && (data.message || data.hint)) || "Could not reach the server. Check the internet.");
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  }
+
+  /* ---- device backend ---- */
+  const devProfiles = () => get("edu_device_profiles", {});
+  async function hash(s) {
+    try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("edugames|" + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); }
+    catch { let h = 0; for (const c of "edugames|" + s) h = (h * 31 + c.charCodeAt(0)) | 0; return "w" + h; }
+  }
+  const WORDS = ["falcon", "lion", "comet", "rocket", "panda", "eagle", "tiger", "star", "dolphin", "camel"];
+  function newUsername(name, taken) {
+    let base = name.toLowerCase().replace(/[^a-z]/g, "").slice(0, 10);
+    if (base.length < 2) base = WORDS[Math.floor(Math.random() * WORDS.length)];
+    let u; do { u = base + (100 + Math.floor(Math.random() * 900)); } while (taken[u]);
+    return u;
+  }
+
+  /* ---- shared checks (same rules as the server) ---- */
+  function checkStudent(name, grade, pin, consent) {
+    if (!consent) throw new Error("A parent must agree before creating an account.");
+    if (!/^\d{4}$/.test(pin || "")) throw new Error("The PIN must be 4 digits.");
+    name = (name || "").trim();
+    if (name.length < 2 || name.length > 20) throw new Error("Write a first name of 2 to 20 letters.");
+    if (!["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
+    return name;
+  }
+  function checkTeacher(name, email, password, consent) {
+    if (!consent) throw new Error("Please accept the terms.");
+    name = (name || "").trim(); email = (email || "").trim().toLowerCase();
+    if (name.length < 2 || name.length > 40) throw new Error("Write your name.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Write a valid email address.");
+    if ((password || "").length < 8) throw new Error("The password must be at least 8 characters.");
+    return [name, email];
+  }
+
+  /* ---- sign up / sign in / out ---- */
+  // a person is signed in on this device. A NEW account keeps what was played here as a guest;
+  // signing in to an existing account replaces it with that account's saved progress.
+  async function start(u, isNew) {
+    if (user) await flush(true);                  // save the previous person's last changes first
+    if (!isNew || user) clearMine();
+    user = u; put("edu_user", u);
+    if (isNew) { myKeys().forEach(k => { try { dirty[k] = localStorage.getItem(k); } catch {} }); }
+    if (u.grade) put("edu_grade", u.grade);
+    if (isNew) { if (u.grade) dirty.edu_grade = JSON.stringify(u.grade); await flush(); } else await pull();
+    return u;
+  }
+  async function signupStudent({ name, grade, pin, consent }) {
+    name = checkStudent(name, grade, pin, consent);
+    if (SERVER) return start(await rpc("signup_student", { p_name: name, p_grade: grade, p_pin: pin, p_consent: true }), true);
+    const all = devProfiles(), username = newUsername(name, all);
+    all[username] = { role: "student", name, grade, hash: await hash(username + pin), progress: {}, created: Date.now() };
+    put("edu_device_profiles", all);
+    return start({ token: "device", username, name, grade, role: "student", device: true }, true);
+  }
+  async function signupTeacher({ name, email, password, consent }) {
+    [name, email] = checkTeacher(name, email, password, consent);
+    if (SERVER) return start(await rpc("signup_teacher", { p_name: name, p_email: email, p_password: password, p_consent: true }), true);
+    const all = devProfiles();
+    if (all[email]) throw new Error("This email already has an account. Sign in instead.");
+    all[email] = { role: "teacher", name, grade: null, hash: await hash(email + password), progress: {}, created: Date.now() };
+    put("edu_device_profiles", all);
+    return start({ token: "device", username: email, name, grade: null, role: "teacher", device: true }, true);
+  }
+  async function login(username, secret) {
+    username = (username || "").trim().toLowerCase();
+    if (SERVER) return start(await rpc("login", { p_username: username, p_secret: secret }));
+    const p = devProfiles()[username];
+    if (!p || p.hash !== await hash(username + secret)) throw new Error("Wrong username or PIN/password.");
+    return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, device: true });
+  }
+  async function logout() {
+    await flush(true);
+    if (SERVER && user && user.token) rpc("logout", { p_token: user.token }).catch(() => {});
+    clearMine(); user = null; drop("edu_user");
+  }
+  async function refresh() {                      // check the saved session is still valid (server only)
+    if (!SERVER || !user || user.device) return user;
+    try { const u = await rpc("me", { p_token: user.token }); user = { ...user, ...u }; put("edu_user", user); }
+    catch (e) { if (/sign in again/i.test(e.message)) { clearMine(); user = null; drop("edu_user"); } }
+    return user;
+  }
+  function clearMine() { myKeys().forEach(drop); }
+
+  /* ---- progress sync: every write to a "mine" key is saved for the signed-in player ---- */
+  Storage.prototype.setItem = function (k, v) {
+    rawSet.call(this, k, v);
+    if (this === localStorage && user && MINE.test(k)) { dirty[k] = v; clearTimeout(saveTimer); saveTimer = setTimeout(() => flush(), 1500); }
+  };
+  async function pull() {
+    if (!user) return;
+    let items = {};
+    if (SERVER && !user.device) { try { items = await rpc("load_progress", { p_token: user.token }) || {}; } catch {} }
+    else items = (devProfiles()[user.username] || {}).progress || {};
+    for (const [k, v] of Object.entries(items)) if (MINE.test(k)) rawSet.call(localStorage, k, typeof v === "string" ? v : JSON.stringify(v));
+    if (user.grade && !items.edu_grade) put("edu_grade", user.grade);
+  }
+  async function flush(final) {
+    clearTimeout(saveTimer);
+    const items = dirty; dirty = {};
+    if (user && Object.keys(items).length) {
+      if (SERVER && !user.device) { try { await rpc("save_progress", { p_token: user.token, p_items: items }); } catch { Object.assign(dirty, items); } }
+      else { const all = devProfiles(), p = all[user.username]; if (p) { Object.assign(p.progress, items); put("edu_device_profiles", all); } }
+    }
+    await flushEvents(final);
+  }
+
+  /* ---- usage events for the admin dashboard ---- */
+  let queue = [], evTimer = null;
+  function track(e) {                             // { event: "answer"|"start", game, grade, lesson, skill, correct }
+    queue.push({ ...e, event: e.event || "answer" });
+    if (e.game) put("edu_last", { game: e.game, at: Date.now() });
+    if (queue.length >= 15) flushEvents(); else { clearTimeout(evTimer); evTimer = setTimeout(flushEvents, 20000); }
+  }
+  async function flushEvents() {
+    clearTimeout(evTimer);
+    if (!queue.length) return;
+    const items = queue.splice(0, 200);
+    if (SERVER) { try { await rpc("log_events", { p_token: user && !user.device ? user.token : null, p_items: items }); } catch { queue.unshift(...items); } }
+    else {   // device mode: keep a small local log so the admin page can show something on this device
+      const log = get("edu_device_events", []); items.forEach(i => log.push({ ...i, role: user ? user.role : "guest", who: user ? user.username : null, at: Date.now() }));
+      put("edu_device_events", log.slice(-5000));
+    }
+  }
+  addEventListener("pagehide", () => flush(true));
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(true); });
+
+  /* ---- admin dashboard data ---- */
+  async function adminStats() {
+    if (SERVER) return rpc("admin_stats", { p_token: user && user.token });
+    if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only.");
+    // device mode: the same shape, built from this device's accounts and events
+    const profs = Object.values(devProfiles()), ev = get("edu_device_events", []), day = 864e5, now = Date.now();
+    const by = (arr, f) => arr.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
+    const ans = ev.filter(e => e.event === "answer");
+    return {
+      totals: { students: profs.filter(p => p.role === "student").length, teachers: profs.filter(p => p.role !== "student").length, active7: new Set(ev.filter(e => e.at > now - 7 * day).map(e => e.who)).size, new7: profs.filter(p => p.created > now - 7 * day).length },
+      answers: { total: ans.length, correct: ans.filter(e => e.correct).length, last7: ans.filter(e => e.at > now - 7 * day).length },
+      games: Object.entries(by(ev, e => e.game)).map(([game, xs]) => ({ game, plays: xs.filter(e => e.event === "start").length, answers: xs.filter(e => e.event === "answer").length, correct: xs.filter(e => e.correct).length })).sort((a, b) => b.answers - a.answers),
+      grades: Object.entries(by(profs.filter(p => p.role === "student"), p => p.grade)).map(([grade, xs]) => ({ grade, students: xs.length })),
+      skills: Object.entries(by(ans, e => `${e.grade}|${e.lesson}|${e.skill || ""}`)).map(([k, xs]) => { const [grade, lesson, skill] = k.split("|"); return { grade, lesson, skill, answers: xs.length, correct: xs.filter(e => e.correct).length }; }).sort((a, b) => b.answers - a.answers).slice(0, 60),
+      days: Array.from({ length: 30 }, (_, i) => { const d0 = new Date(now - (29 - i) * day).toISOString().slice(0, 10); const same = t => new Date(t).toISOString().slice(0, 10) === d0;
+        return { day: d0, students: profs.filter(p => p.role === "student" && same(p.created)).length, teachers: profs.filter(p => p.role !== "student" && same(p.created)).length, answers: ans.filter(e => same(e.at)).length }; }),
+      device: true,
+    };
+  }
+
+  return {
+    get user() { return user; }, get server() { return SERVER; },
+    role: () => (user ? user.role : null),
+    signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, adminStats,
+    // admin: delete an account (privacy request); returns how many were deleted
+    adminDelete: async username => {
+      username = (username || "").trim().toLowerCase();
+      if (SERVER) return (await rpc("admin_delete_user", { p_token: user && user.token, p_username: username })).deleted;
+      const all = devProfiles(); if (!all[username] || username === (user && user.username)) return 0;
+      delete all[username]; put("edu_device_profiles", all); return 1;
+    },
+    setGrade: g => { if (!user) return; user.grade = g; put("edu_user", user); if (SERVER && !user.device) rpc("set_grade", { p_token: user.token, p_grade: g }).catch(() => {}); },
+  };
+})();
+
 /* ================= engine core: shared helpers for every grade ================= */
 // Every question carries:
 //   options/correct/explain  - the four choices and a short solution line
@@ -1065,6 +1258,7 @@ const KIT = (() => {
     document.body.insertAdjacentHTML("beforeend", `<button class="menu-btn" id="kMenu" aria-label="Open menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="#FCA500" stroke-width="2.4" stroke-linecap="round"/></svg></button><div class="scrim" id="kScrim" hidden></div><nav class="drawer" id="kDrawer" hidden aria-label="Menu">
       <div class="drawer-head"><b>Menu</b><button class="x" id="kClose" aria-label="Close menu">&times;</button></div>
       ${window.HUB_URL ? `<a class="mitem home" href="${window.HUB_URL}">&#8592; All games</a>` : ""}
+      ${EDU.user ? `<div class="mwho">Signed in: <b>${esc(EDU.user.name)}</b> \u00b7 ${EDU.user.role === "student" ? "Student" : "Teacher"}</div>` : ""}
       <div class="mgroup">GRADE LEVEL</div><div id="kGrades"></div>
       <div class="mgroup">GAME</div>${(o.extra || []).map((e, i) => `<button class="mitem" id="kX${i}">${e[0]}</button>`).join("")}<button class="mitem" id="kSound">Sound: on</button>
     </nav>`);
@@ -1134,7 +1328,9 @@ const KIT = (() => {
     bs.forEach(b => (b.disabled = true));
     bs[q.correct].classList.add("right");
     if (sel !== null && sel !== undefined && sel !== q.correct) bs[sel].classList.add("wrong");
+    if (sel !== null && sel !== undefined) EDU.track({ game: opts.game, grade, lesson: q.lesson, skill: q.skill || null, correct: sel === q.correct });
   }
+  const started = () => EDU.track({ event: "start", game: opts.game, grade });
   // why the chosen answer is wrong + how to solve it (null sel = just show the solution)
   function explain(q, sel) {
     if (sel === q.correct) return `<b class="ok">CORRECT: ${L4[q.correct]}</b> \u2014 ${q.explain}`;
@@ -1162,9 +1358,9 @@ const KIT = (() => {
       if (++f < 240) requestAnimationFrame(step); else c.remove();
     })();
   }
-  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;"); }
 
-  return { load, save, tone, sfx, mountMenu, toggle, menuOpen, nextQuestion, lessons, allLessons, by, summary, get grade() { return grade; }, showQuestion, mark, explain, keys, confetti, esc };
+  return { load, save, tone, sfx, mountMenu, toggle, menuOpen, nextQuestion, lessons, allLessons, by, summary, started, get grade() { return grade; }, showQuestion, mark, explain, keys, confetti, esc };
 })();
 
 
@@ -1183,7 +1379,7 @@ function renderStart() {
 $("secs").value = KIT.load("minute_secs", "60");
 $("secs").addEventListener("change", () => { KIT.save("minute_secs", $("secs").value); renderStart(); });
 $("btnLessons").addEventListener("click", () => KIT.toggle(true, true));
-KIT.mountMenu({ onChange: renderStart, extra: [["Start again", () => { stop(); renderStart(); show("scrStart"); }]] });
+KIT.mountMenu({ game: "minute", onChange: renderStart, extra: [["Start again", () => { stop(); renderStart(); show("scrStart"); }]] });
 function show(id) { ["scrStart", "scrPlay", "scrEnd"].forEach(s => ($(s).hidden = s !== id)); }
 
 $("btnGo").addEventListener("click", start);
@@ -1192,6 +1388,7 @@ $("btnHome").addEventListener("click", () => { renderStart(); show("scrStart"); 
 function start() {
   const secs = +$("secs").value;
   G = { secs, left: secs, score: 0, streak: 0, best: 0, misses: [], busy: false };
+  KIT.started();
   $("score").textContent = 0; $("streak").textContent = 0; $("quick").hidden = true;
   show("scrPlay"); next(); tickRing();
   clearInterval(timer);

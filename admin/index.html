@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#051C54">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Math Games">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" href="../icon-192.png">
+<title>Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+/* Layout: summary first (six headline numbers), then one daily-activity chart each for answers and sign-ups,
+   then the detail tables (games, grades, weakest skills, all skills). Same navy/gold as the app, deliberately dark. */
+:root{--deep:#020B26;--stage:#051C54;--panel:#0B2563;--line:rgba(201,211,234,.18);--silver:#C9D3EA;--muted:#8C9AC0;
+  --gold:#FCA500;--green:#3DC48A;--coral:#ED4667;--ink:#051C54;--display:"Nunito","Segoe UI",sans-serif;--body:"Segoe UI","Nunito",sans-serif;color-scheme:dark}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--deep);color:#fff;font-family:var(--body)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:16px 40px;padding-inline:16px;display:flex;flex-direction:column;gap:18px}
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bar h1{margin:0;font-family:var(--display);font-size:24px}
+.bar h1 span{color:var(--gold)}
+.spacer{flex:1}
+.b{border:1.5px solid rgba(201,211,234,.45);background:rgba(2,11,38,.5);border-radius:99px;padding:6px 14px;font-family:var(--display);font-size:14px;text-decoration:none;color:#fff;cursor:pointer}
+.b:hover{border-color:var(--gold)}
+.note{color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--stage);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.kpi span{display:block;color:var(--muted);font-size:13px}
+.kpi b{font-family:var(--display);font-size:30px;font-variant-numeric:tabular-nums}
+.panel{background:var(--stage);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.panel h2{margin:0 0 10px;font-family:var(--display);font-size:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:#020B26;border:1px solid var(--silver);border-radius:8px;padding:6px 10px;font-size:13px;white-space:nowrap;transform:translate(-50%,-110%)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--muted);font-weight:600;font-size:12.5px}
+td.n,th.n{text-align:right}
+.acc{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.acc i{display:block;height:8px;border-radius:4px;background:var(--gold);min-width:2px}
+.acc i.low{background:var(--coral)}
+.acc i.good{background:var(--green)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+.login{max-width:420px;margin:40px auto;background:var(--stage);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.login h2{margin:0;font-family:var(--display);color:var(--gold)}
+.login label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--silver)}
+.login input{background:var(--deep);border:1.5px solid rgba(201,211,234,.5);border-radius:10px;padding:10px 12px;font-size:16px}
+.login button{background:var(--gold);color:var(--ink);border:0;border-radius:99px;padding:10px;font-family:var(--display);font-size:16px;cursor:pointer}
+.err{color:#FF8FA6;font-size:14px;min-height:1.2em}
+.del{display:flex;gap:10px;flex-wrap:wrap}
+.del input{flex:1;min-width:220px;background:var(--deep);border:1.5px solid rgba(201,211,234,.5);border-radius:10px;padding:8px 12px;font-size:15px}
+.ok{color:#3DC48A}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="bar">
+    <h1><span>Admin</span> dashboard</h1><span class="spacer"></span>
+    <span class="note" id="who"></span>
+    <button class="b" id="refresh" hidden>Refresh</button>
+    <a class="b" href="../">Back to the app</a>
+  </header>
+
+  <section class="login" id="login" hidden>
+    <h2>Sign in</h2>
+    <p class="note" id="loginNote">Use the admin teacher account.</p>
+    <label>Username or email<input id="u" autocomplete="username" autocapitalize="none"></label>
+    <label>Password<input id="p" type="password" autocomplete="current-password"></label>
+    <div class="err" id="err"></div>
+    <button id="go">Sign in</button>
+  </section>
+
+  <main id="dash" hidden style="display:flex;flex-direction:column;gap:18px">
+    <p class="note" id="mode"></p>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <section class="panel"><h2>Answers per day &#xb7; last 30 days</h2><div class="chart" id="cAnswers"></div></section>
+      <section class="panel"><h2>New accounts per day &#xb7; last 30 days</h2><div class="chart" id="cSign"></div></section>
+    </div>
+    <div class="grid2">
+      <section class="panel"><h2>Games</h2><div class="tw" id="tGames"></div></section>
+      <section class="panel"><h2>Students by grade</h2><div class="tw" id="tGrades"></div></section>
+    </div>
+    <section class="panel"><h2>Weakest skills <span class="note">(at least 10 answers, lowest accuracy first)</span></h2><div class="tw" id="tWeak"></div></section>
+    <section class="panel"><h2>Most played lessons and skills</h2><div class="tw" id="tSkills"></div></section>
+    <section class="panel"><h2>Delete an account</h2>
+      <p class="note">For a parent or teacher who asks to delete an account. Their stars, scores and sign-in are removed; past answers stay only as anonymous totals.</p>
+      <div class="del"><input id="delUser" placeholder="username, e.g. omar482, or teacher email" autocapitalize="none"><button class="b" id="delBtn">Delete</button></div>
+      <div class="err" id="delMsg"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+window.EDU_BACKEND = { "url": "https://gihclosptgwzghthuxtv.supabase.co", "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpaGNsb3NwdGd3emdodGh1eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NTkwNDcsImV4cCI6MjEwNjQzNTA0N30.uMXopcrg4n5Pa5MRg9QvMFqFI5MdxBIqSk8b0u7Mit4" };
+/* ================= accounts, progress sync and usage stats (shared by the app home, every game and admin) ================= */
+// Two backends with the same calls:
+//   server \u2014 Supabase (window.EDU_BACKEND = { url, anonKey } from app/backend.json): works on any device, feeds the admin dashboard
+//   device \u2014 localStorage only, used until the server is configured (same screens; data stays on this device)
+const EDU = (() => {
+  const cfg = window.EDU_BACKEND || {};
+  const SERVER = !!(cfg.url && cfg.anonKey);
+  const rawSet = Storage.prototype.setItem, rawRemove = Storage.prototype.removeItem;
+  const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
+  const put = (k, v) => { try { rawSet.call(localStorage, k, JSON.stringify(v)); } catch {} };
+  const drop = k => { try { rawRemove.call(localStorage, k); } catch {} };
+  // what belongs to a player and travels with the account
+  const MINE = /^(edu_by_|edu_lessons_|edu_skills_|edu_grade$|edu_last$|map_progress_|minute_best_|minute_secs$|race_setup$|mm4_)/;
+  const myKeys = () => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MINE.test(k)) out.push(k); } } catch {} return out; };
+
+  let user = get("edu_user", null);          // { token, username, name, grade, role, device? }
+  let dirty = {}, saveTimer = null;           // progress keys waiting to be saved for the signed-in player
+
+  /* ---- server calls (Supabase RPC) ---- */
+  async function rpc(fn, args) {
+    const r = await fetch(`${cfg.url}/rest/v1/rpc/${fn}`, {
+      method: "POST", keepalive: fn === "log_events" || fn === "save_progress",
+      headers: { apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    const text = await r.text(), data = text ? JSON.parse(text) : null;
+    if (!r.ok) throw new Error((data && (data.message || data.hint)) || "Could not reach the server. Check the internet.");
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  }
+
+  /* ---- device backend ---- */
+  const devProfiles = () => get("edu_device_profiles", {});
+  async function hash(s) {
+    try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("edugames|" + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); }
+    catch { let h = 0; for (const c of "edugames|" + s) h = (h * 31 + c.charCodeAt(0)) | 0; return "w" + h; }
+  }
+  const WORDS = ["falcon", "lion", "comet", "rocket", "panda", "eagle", "tiger", "star", "dolphin", "camel"];
+  function newUsername(name, taken) {
+    let base = name.toLowerCase().replace(/[^a-z]/g, "").slice(0, 10);
+    if (base.length < 2) base = WORDS[Math.floor(Math.random() * WORDS.length)];
+    let u; do { u = base + (100 + Math.floor(Math.random() * 900)); } while (taken[u]);
+    return u;
+  }
+
+  /* ---- shared checks (same rules as the server) ---- */
+  function checkStudent(name, grade, pin, consent) {
+    if (!consent) throw new Error("A parent must agree before creating an account.");
+    if (!/^\d{4}$/.test(pin || "")) throw new Error("The PIN must be 4 digits.");
+    name = (name || "").trim();
+    if (name.length < 2 || name.length > 20) throw new Error("Write a first name of 2 to 20 letters.");
+    if (!["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
+    return name;
+  }
+  function checkTeacher(name, email, password, consent) {
+    if (!consent) throw new Error("Please accept the terms.");
+    name = (name || "").trim(); email = (email || "").trim().toLowerCase();
+    if (name.length < 2 || name.length > 40) throw new Error("Write your name.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Write a valid email address.");
+    if ((password || "").length < 8) throw new Error("The password must be at least 8 characters.");
+    return [name, email];
+  }
+
+  /* ---- sign up / sign in / out ---- */
+  // a person is signed in on this device. A NEW account keeps what was played here as a guest;
+  // signing in to an existing account replaces it with that account's saved progress.
+  async function start(u, isNew) {
+    if (user) await flush(true);                  // save the previous person's last changes first
+    if (!isNew || user) clearMine();
+    user = u; put("edu_user", u);
+    if (isNew) { myKeys().forEach(k => { try { dirty[k] = localStorage.getItem(k); } catch {} }); }
+    if (u.grade) put("edu_grade", u.grade);
+    if (isNew) { if (u.grade) dirty.edu_grade = JSON.stringify(u.grade); await flush(); } else await pull();
+    return u;
+  }
+  async function signupStudent({ name, grade, pin, consent }) {
+    name = checkStudent(name, grade, pin, consent);
+    if (SERVER) return start(await rpc("signup_student", { p_name: name, p_grade: grade, p_pin: pin, p_consent: true }), true);
+    const all = devProfiles(), username = newUsername(name, all);
+    all[username] = { role: "student", name, grade, hash: await hash(username + pin), progress: {}, created: Date.now() };
+    put("edu_device_profiles", all);
+    return start({ token: "device", username, name, grade, role: "student", device: true }, true);
+  }
+  async function signupTeacher({ name, email, password, consent }) {
+    [name, email] = checkTeacher(name, email, password, consent);
+    if (SERVER) return start(await rpc("signup_teacher", { p_name: name, p_email: email, p_password: password, p_consent: true }), true);
+    const all = devProfiles();
+    if (all[email]) throw new Error("This email already has an account. Sign in instead.");
+    all[email] = { role: "teacher", name, grade: null, hash: await hash(email + password), progress: {}, created: Date.now() };
+    put("edu_device_profiles", all);
+    return start({ token: "device", username: email, name, grade: null, role: "teacher", device: true }, true);
+  }
+  async function login(username, secret) {
+    username = (username || "").trim().toLowerCase();
+    if (SERVER) return start(await rpc("login", { p_username: username, p_secret: secret }));
+    const p = devProfiles()[username];
+    if (!p || p.hash !== await hash(username + secret)) throw new Error("Wrong username or PIN/password.");
+    return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, device: true });
+  }
+  async function logout() {
+    await flush(true);
+    if (SERVER && user && user.token) rpc("logout", { p_token: user.token }).catch(() => {});
+    clearMine(); user = null; drop("edu_user");
+  }
+  async function refresh() {                      // check the saved session is still valid (server only)
+    if (!SERVER || !user || user.device) return user;
+    try { const u = await rpc("me", { p_token: user.token }); user = { ...user, ...u }; put("edu_user", user); }
+    catch (e) { if (/sign in again/i.test(e.message)) { clearMine(); user = null; drop("edu_user"); } }
+    return user;
+  }
+  function clearMine() { myKeys().forEach(drop); }
+
+  /* ---- progress sync: every write to a "mine" key is saved for the signed-in player ---- */
+  Storage.prototype.setItem = function (k, v) {
+    rawSet.call(this, k, v);
+    if (this === localStorage && user && MINE.test(k)) { dirty[k] = v; clearTimeout(saveTimer); saveTimer = setTimeout(() => flush(), 1500); }
+  };
+  async function pull() {
+    if (!user) return;
+    let items = {};
+    if (SERVER && !user.device) { try { items = await rpc("load_progress", { p_token: user.token }) || {}; } catch {} }
+    else items = (devProfiles()[user.username] || {}).progress || {};
+    for (const [k, v] of Object.entries(items)) if (MINE.test(k)) rawSet.call(localStorage, k, typeof v === "string" ? v : JSON.stringify(v));
+    if (user.grade && !items.edu_grade) put("edu_grade", user.grade);
+  }
+  async function flush(final) {
+    clearTimeout(saveTimer);
+    const items = dirty; dirty = {};
+    if (user && Object.keys(items).length) {
+      if (SERVER && !user.device) { try { await rpc("save_progress", { p_token: user.token, p_items: items }); } catch { Object.assign(dirty, items); } }
+      else { const all = devProfiles(), p = all[user.username]; if (p) { Object.assign(p.progress, items); put("edu_device_profiles", all); } }
+    }
+    await flushEvents(final);
+  }
+
+  /* ---- usage events for the admin dashboard ---- */
+  let queue = [], evTimer = null;
+  function track(e) {                             // { event: "answer"|"start", game, grade, lesson, skill, correct }
+    queue.push({ ...e, event: e.event || "answer" });
+    if (e.game) put("edu_last", { game: e.game, at: Date.now() });
+    if (queue.length >= 15) flushEvents(); else { clearTimeout(evTimer); evTimer = setTimeout(flushEvents, 20000); }
+  }
+  async function flushEvents() {
+    clearTimeout(evTimer);
+    if (!queue.length) return;
+    const items = queue.splice(0, 200);
+    if (SERVER) { try { await rpc("log_events", { p_token: user && !user.device ? user.token : null, p_items: items }); } catch { queue.unshift(...items); } }
+    else {   // device mode: keep a small local log so the admin page can show something on this device
+      const log = get("edu_device_events", []); items.forEach(i => log.push({ ...i, role: user ? user.role : "guest", who: user ? user.username : null, at: Date.now() }));
+      put("edu_device_events", log.slice(-5000));
+    }
+  }
+  addEventListener("pagehide", () => flush(true));
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(true); });
+
+  /* ---- admin dashboard data ---- */
+  async function adminStats() {
+    if (SERVER) return rpc("admin_stats", { p_token: user && user.token });
+    if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only.");
+    // device mode: the same shape, built from this device's accounts and events
+    const profs = Object.values(devProfiles()), ev = get("edu_device_events", []), day = 864e5, now = Date.now();
+    const by = (arr, f) => arr.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
+    const ans = ev.filter(e => e.event === "answer");
+    return {
+      totals: { students: profs.filter(p => p.role === "student").length, teachers: profs.filter(p => p.role !== "student").length, active7: new Set(ev.filter(e => e.at > now - 7 * day).map(e => e.who)).size, new7: profs.filter(p => p.created > now - 7 * day).length },
+      answers: { total: ans.length, correct: ans.filter(e => e.correct).length, last7: ans.filter(e => e.at > now - 7 * day).length },
+      games: Object.entries(by(ev, e => e.game)).map(([game, xs]) => ({ game, plays: xs.filter(e => e.event === "start").length, answers: xs.filter(e => e.event === "answer").length, correct: xs.filter(e => e.correct).length })).sort((a, b) => b.answers - a.answers),
+      grades: Object.entries(by(profs.filter(p => p.role === "student"), p => p.grade)).map(([grade, xs]) => ({ grade, students: xs.length })),
+      skills: Object.entries(by(ans, e => `${e.grade}|${e.lesson}|${e.skill || ""}`)).map(([k, xs]) => { const [grade, lesson, skill] = k.split("|"); return { grade, lesson, skill, answers: xs.length, correct: xs.filter(e => e.correct).length }; }).sort((a, b) => b.answers - a.answers).slice(0, 60),
+      days: Array.from({ length: 30 }, (_, i) => { const d0 = new Date(now - (29 - i) * day).toISOString().slice(0, 10); const same = t => new Date(t).toISOString().slice(0, 10) === d0;
+        return { day: d0, students: profs.filter(p => p.role === "student" && same(p.created)).length, teachers: profs.filter(p => p.role !== "student" && same(p.created)).length, answers: ans.filter(e => same(e.at)).length }; }),
+      device: true,
+    };
+  }
+
+  return {
+    get user() { return user; }, get server() { return SERVER; },
+    role: () => (user ? user.role : null),
+    signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, adminStats,
+    // admin: delete an account (privacy request); returns how many were deleted
+    adminDelete: async username => {
+      username = (username || "").trim().toLowerCase();
+      if (SERVER) return (await rpc("admin_delete_user", { p_token: user && user.token, p_username: username })).deleted;
+      const all = devProfiles(); if (!all[username] || username === (user && user.username)) return 0;
+      delete all[username]; put("edu_device_profiles", all); return 1;
+    },
+    setGrade: g => { if (!user) return; user.grade = g; put("edu_user", user); if (SERVER && !user.device) rpc("set_grade", { p_token: user.token, p_grade: g }).catch(() => {}); },
+  };
+})();
+
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n || 0).toLocaleString("en-US");
+const pct = (c, a) => (a ? Math.round((c / a) * 100) : 0);
+const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const GAME_NAMES = { millionaire: "Math Millionaire", race: "Team Race", minute: "Minute Challenge", map: "Adventure Map" };
+
+function accCell(c, a) {
+  const p = pct(c, a);
+  return `<div class="acc">${a ? p + "%" : "\u2013"}<i class="${p < 50 ? "low" : p >= 80 ? "good" : ""}" style="width:${Math.max(2, p * 0.8)}px"></i></div>`;
+}
+// one-series bar chart with a hover tooltip (single measure \u2192 no legend; the title names it)
+function bars(el, rows, key, label) {
+  const W = 560, H = 190, padL = 34, padB = 22, padT = 8, n = rows.length, max = Math.max(1, ...rows.map(r => +r[key] || 0));
+  const step = (W - padL - 8) / n, bw = Math.max(3, step - 3);
+  const nice = Math.ceil(max / 4) * 4 || 4, y = v => padT + (H - padT - padB) * (1 - v / nice);
+  const ticks = [0, nice / 2, nice].map(v => `<line x1="${padL}" x2="${W - 4}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(201,211,234,.15)"/><text x="${padL - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#8C9AC0">${fmt(v)}</text>`).join("");
+  const marks = rows.map((r, i) => { const v = +r[key] || 0, x = padL + i * step + 1.5, top = y(v), h = H - padB - top;
+    return `<g data-i="${i}"><rect x="${x - 1}" y="${padT}" width="${step}" height="${H - padT - padB}" fill="transparent"/>${v ? `<path d="M${x} ${H - padB}V${top + Math.min(4, h)}q0 -4 4 -4h${bw - 8}q4 0 4 4V${H - padB}z" fill="#FCA500"/>` : ""}</g>`; }).join("");
+  const xl = [0, Math.floor(n / 2), n - 1].map(i => `<text x="${padL + i * step + step / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#8C9AC0">${rows[i].day.slice(5)}</text>`).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}">${ticks}<line x1="${padL}" x2="${W - 4}" y1="${H - padB}" y2="${H - padB}" stroke="rgba(201,211,234,.35)"/>${marks}${xl}</svg><div class="tip" hidden></div>`;
+  const tip = el.querySelector(".tip");
+  el.querySelectorAll("g[data-i]").forEach(g => {
+    g.addEventListener("mouseenter", () => { const r = rows[+g.dataset.i], b = g.getBoundingClientRect(), p = el.getBoundingClientRect();
+      tip.innerHTML = `<b>${r.day}</b> \u00b7 ${fmt(r[key])} ${label}`; tip.style.left = `${b.left - p.left + b.width / 2}px`; tip.style.top = `${b.top - p.top + 20}px`; tip.hidden = false; });
+    g.addEventListener("mouseleave", () => (tip.hidden = true));
+  });
+}
+function table(el, head, rows) {
+  el.innerHTML = rows.length ? `<table><thead><tr>${head.map(([h, n]) => `<th class="${n ? "n" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td class="${head[i][1] ? "n" : ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : `<div class="empty">No data yet.</div>`;
+}
+
+async function load() {
+  const d = await EDU.adminStats();
+  $("login").hidden = true; $("dash").hidden = false; $("refresh").hidden = false;
+  $("who").textContent = `${EDU.user.name} (${EDU.user.username})`;
+  $("mode").textContent = d.device ? "Device mode: these numbers come from this device only. They become app-wide once the server (Supabase) is connected." : `Live data \u00b7 updated ${new Date().toLocaleString("en-GB")}`;
+  const t = d.totals, a = d.answers;
+  $("kpis").innerHTML = [["Students", t.students], ["Teachers", t.teachers], ["Active \u00b7 7 days", t.active7], ["New \u00b7 7 days", t.new7], ["Answers", a.total], ["Accuracy", pct(a.correct, a.total) + "%"]]
+    .map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${typeof v === "number" ? fmt(v) : v}</b></div>`).join("");
+  bars($("cAnswers"), d.days, "answers", "answers");
+  bars($("cSign"), d.days.map(x => ({ ...x, accounts: (+x.students || 0) + (+x.teachers || 0) })), "accounts", "new accounts");
+  table($("tGames"), [["Game"], ["Plays", 1], ["Answers", 1], ["Accuracy", 1]], (d.games || []).filter(g => g.game).map(g => [esc(GAME_NAMES[g.game] || g.game), fmt(g.plays), fmt(g.answers), accCell(g.correct, g.answers)]));
+  table($("tGrades"), [["Grade"], ["Students", 1]], (d.grades || []).map(g => [g.grade === "KG" ? "KG" : `Grade ${esc(g.grade)}`, fmt(g.students)]));
+  const skills = d.skills || [];
+  table($("tWeak"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.filter(s => s.answers >= 10).sort((x, y) => x.correct / x.answers - y.correct / y.answers).slice(0, 8)
+    .map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
+  table($("tSkills"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.slice(0, 25).map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
+}
+async function boot() {
+  try { await EDU.refresh(); if (EDU.user) { await load(); return; } } catch (e) { $("err").textContent = e.message; }
+  $("login").hidden = false; $("dash").hidden = true;
+  if (!EDU.server) $("loginNote").textContent = "Device mode: sign in with a teacher account made on this device.";
+}
+$("go").addEventListener("click", async () => {
+  $("err").textContent = "";
+  try { await EDU.login($("u").value, $("p").value); await load(); } catch (e) { $("err").textContent = e.message; }
+});
+$("p").addEventListener("keydown", e => { if (e.key === "Enter") $("go").click(); });
+// two clicks to delete: the first asks, the second deletes
+let armed = "";
+$("delBtn").addEventListener("click", async () => {
+  const name = $("delUser").value.trim().toLowerCase(), msg = $("delMsg"); msg.className = "err";
+  if (!name) { msg.textContent = "Write the username first."; return; }
+  if (armed !== name) { armed = name; msg.textContent = `Click Delete again to remove ${name} for good.`; $("delBtn").textContent = "Yes, delete"; return; }
+  armed = ""; $("delBtn").textContent = "Delete";
+  try { const n = await EDU.adminDelete(name); msg.className = n ? "err ok" : "err"; msg.textContent = n ? `${name} was deleted.` : `No account called ${name}.`; if (n) load(); }
+  catch (e) { msg.textContent = e.message; }
+});
+$("delUser").addEventListener("input", () => { armed = ""; $("delBtn").textContent = "Delete"; $("delMsg").textContent = ""; });
+$("refresh").addEventListener("click", () => load().catch(e => ($("err").textContent = e.message)));
+boot();
+</script>
+
+</body>
+</html>

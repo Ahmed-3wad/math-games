@@ -92,6 +92,40 @@ a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
 .modal h3{margin:0 0 10px;font-family:var(--display);color:var(--gold)}
 .modal ol{margin:0 0 6px;padding-inline-start:1.3em;line-height:1.7}
 .modal .btn{margin-top:10px;background:var(--gold);color:var(--ink);border:0;border-radius:99px;padding:8px 22px;font-family:var(--display)}
+/* account */
+.acct{border:1.5px solid rgba(201,211,234,.5);background:rgba(2,11,38,.5);border-radius:99px;padding:6px 14px;font-family:var(--display);font-size:14px;display:flex;align-items:center;gap:8px}
+.acct i{width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--ink);display:grid;place-items:center;font-style:normal;font-weight:900}
+.mine{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;background:rgba(2,11,38,.55);border:1.5px solid rgba(252,165,0,.45);border-radius:20px;padding:14px 18px}
+.mine img{height:84px}
+.mine h2{margin:0 0 4px;font-family:var(--display);font-size:20px}
+.mine .facts{display:flex;gap:18px;flex-wrap:wrap;color:var(--silver);font-size:14px}
+.mine .facts b{color:var(--gold);font-family:var(--display);font-size:20px;margin-inline-end:4px}
+.mine a.btnc{background:var(--gold);color:var(--ink);text-decoration:none;font-family:var(--display);border-radius:99px;padding:10px 20px;white-space:nowrap}
+@media (max-width:640px){.mine{grid-template-columns:1fr}.mine img{display:none}}
+.welcome{width:min(620px,100%);text-align:start}
+.welcome h3{font-size:clamp(22px,3vw,30px)}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.who button{border:2px solid rgba(201,211,234,.45);background:rgba(2,11,38,.5);border-radius:16px;padding:16px 14px;text-align:start;display:flex;flex-direction:column;gap:4px}
+.who button:hover{border-color:var(--gold)}
+.who button b{font-family:var(--display);font-size:19px;color:var(--gold)}
+.who button span{font-size:13px;color:var(--silver);line-height:1.45}
+@media (max-width:520px){.who{grid-template-columns:1fr}}
+.links{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px}
+.links button,.lnk{background:none;border:0;color:var(--gold);text-decoration:underline;padding:0;font-size:14px}
+.form{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--silver)}
+.form input,.form select{background:var(--deep);border:1.5px solid rgba(201,211,234,.5);border-radius:10px;color:#fff;padding:10px 12px;font:inherit;font-size:16px}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form .chk{flex-direction:row;align-items:flex-start;gap:8px;color:#fff}
+.form .chk input{width:18px;height:18px;accent-color:var(--gold);margin-top:2px}
+.err{color:#FF8FA6;font-size:14px;min-height:1.2em}
+.note2{color:var(--muted);font-size:12.5px}
+.ucard{background:var(--deep);border:2px dashed var(--gold);border-radius:16px;padding:16px;text-align:center;margin:12px 0}
+.ucard b{display:block;font-family:"Nunito",monospace;font-size:34px;color:var(--gold);letter-spacing:.04em;direction:ltr}
+.plist{margin:0;padding-inline-start:1.2em;line-height:1.8}
+.arow{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.arow button,.arow a{background:rgba(2,11,38,.5);border:1.5px solid rgba(201,211,234,.4);border-radius:12px;padding:10px 14px;font-family:var(--display);color:#fff;text-decoration:none;text-align:start}
+.arow button:hover,.arow a:hover{border-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -103,6 +137,7 @@ a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
     <header class="bar">
       <a class="logo" href="./" aria-label="Math Games"><img src="icon-192.png" alt=""><b>Math Games</b><span>&#x623;&#x644;&#x639;&#x627;&#x628; &#x627;&#x644;&#x631;&#x64a;&#x627;&#x636;&#x64a;&#x627;&#x62a;</span></a>
       <span class="spacer"></span>
+      <button class="acct" id="acctBtn" hidden></button>
       <div class="lang" role="group" aria-label="Language">
         <button id="lEn" aria-pressed="true">English</button><button id="lAr" aria-pressed="false">&#x639;&#x631;&#x628;&#x64a;</button>
       </div>
@@ -112,6 +147,8 @@ a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
       <h1 id="hTitle"></h1>
       <p id="hSub"></p>
     </section>
+
+    <section class="mine" id="mine" hidden></section>
 
     <div class="grades" id="grades"></div>
 
@@ -127,6 +164,9 @@ a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
   </div>
 </div>
 
+<div class="overlay" id="ovWelcome" hidden><div class="modal welcome" id="welcome" role="dialog" aria-modal="true"></div></div>
+<div class="overlay" id="ovAcct" hidden><div class="modal welcome" id="acctBox" role="dialog" aria-modal="true"></div></div>
+
 <div class="overlay" id="ovHow" hidden>
   <div class="modal">
     <h3 id="howTitle"></h3>
@@ -136,18 +176,225 @@ a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
 </div>
 
 <script>
+window.EDU_BACKEND = { "url": "https://gihclosptgwzghthuxtv.supabase.co", "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpaGNsb3NwdGd3emdodGh1eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NTkwNDcsImV4cCI6MjEwNjQzNTA0N30.uMXopcrg4n5Pa5MRg9QvMFqFI5MdxBIqSk8b0u7Mit4" };
+/* ================= accounts, progress sync and usage stats (shared by the app home, every game and admin) ================= */
+// Two backends with the same calls:
+//   server \u2014 Supabase (window.EDU_BACKEND = { url, anonKey } from app/backend.json): works on any device, feeds the admin dashboard
+//   device \u2014 localStorage only, used until the server is configured (same screens; data stays on this device)
+const EDU = (() => {
+  const cfg = window.EDU_BACKEND || {};
+  const SERVER = !!(cfg.url && cfg.anonKey);
+  const rawSet = Storage.prototype.setItem, rawRemove = Storage.prototype.removeItem;
+  const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
+  const put = (k, v) => { try { rawSet.call(localStorage, k, JSON.stringify(v)); } catch {} };
+  const drop = k => { try { rawRemove.call(localStorage, k); } catch {} };
+  // what belongs to a player and travels with the account
+  const MINE = /^(edu_by_|edu_lessons_|edu_skills_|edu_grade$|edu_last$|map_progress_|minute_best_|minute_secs$|race_setup$|mm4_)/;
+  const myKeys = () => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MINE.test(k)) out.push(k); } } catch {} return out; };
+
+  let user = get("edu_user", null);          // { token, username, name, grade, role, device? }
+  let dirty = {}, saveTimer = null;           // progress keys waiting to be saved for the signed-in player
+
+  /* ---- server calls (Supabase RPC) ---- */
+  async function rpc(fn, args) {
+    const r = await fetch(`${cfg.url}/rest/v1/rpc/${fn}`, {
+      method: "POST", keepalive: fn === "log_events" || fn === "save_progress",
+      headers: { apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    const text = await r.text(), data = text ? JSON.parse(text) : null;
+    if (!r.ok) throw new Error((data && (data.message || data.hint)) || "Could not reach the server. Check the internet.");
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  }
+
+  /* ---- device backend ---- */
+  const devProfiles = () => get("edu_device_profiles", {});
+  async function hash(s) {
+    try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("edugames|" + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); }
+    catch { let h = 0; for (const c of "edugames|" + s) h = (h * 31 + c.charCodeAt(0)) | 0; return "w" + h; }
+  }
+  const WORDS = ["falcon", "lion", "comet", "rocket", "panda", "eagle", "tiger", "star", "dolphin", "camel"];
+  function newUsername(name, taken) {
+    let base = name.toLowerCase().replace(/[^a-z]/g, "").slice(0, 10);
+    if (base.length < 2) base = WORDS[Math.floor(Math.random() * WORDS.length)];
+    let u; do { u = base + (100 + Math.floor(Math.random() * 900)); } while (taken[u]);
+    return u;
+  }
+
+  /* ---- shared checks (same rules as the server) ---- */
+  function checkStudent(name, grade, pin, consent) {
+    if (!consent) throw new Error("A parent must agree before creating an account.");
+    if (!/^\d{4}$/.test(pin || "")) throw new Error("The PIN must be 4 digits.");
+    name = (name || "").trim();
+    if (name.length < 2 || name.length > 20) throw new Error("Write a first name of 2 to 20 letters.");
+    if (!["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
+    return name;
+  }
+  function checkTeacher(name, email, password, consent) {
+    if (!consent) throw new Error("Please accept the terms.");
+    name = (name || "").trim(); email = (email || "").trim().toLowerCase();
+    if (name.length < 2 || name.length > 40) throw new Error("Write your name.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Write a valid email address.");
+    if ((password || "").length < 8) throw new Error("The password must be at least 8 characters.");
+    return [name, email];
+  }
+
+  /* ---- sign up / sign in / out ---- */
+  // a person is signed in on this device. A NEW account keeps what was played here as a guest;
+  // signing in to an existing account replaces it with that account's saved progress.
+  async function start(u, isNew) {
+    if (user) await flush(true);                  // save the previous person's last changes first
+    if (!isNew || user) clearMine();
+    user = u; put("edu_user", u);
+    if (isNew) { myKeys().forEach(k => { try { dirty[k] = localStorage.getItem(k); } catch {} }); }
+    if (u.grade) put("edu_grade", u.grade);
+    if (isNew) { if (u.grade) dirty.edu_grade = JSON.stringify(u.grade); await flush(); } else await pull();
+    return u;
+  }
+  async function signupStudent({ name, grade, pin, consent }) {
+    name = checkStudent(name, grade, pin, consent);
+    if (SERVER) return start(await rpc("signup_student", { p_name: name, p_grade: grade, p_pin: pin, p_consent: true }), true);
+    const all = devProfiles(), username = newUsername(name, all);
+    all[username] = { role: "student", name, grade, hash: await hash(username + pin), progress: {}, created: Date.now() };
+    put("edu_device_profiles", all);
+    return start({ token: "device", username, name, grade, role: "student", device: true }, true);
+  }
+  async function signupTeacher({ name, email, password, consent }) {
+    [name, email] = checkTeacher(name, email, password, consent);
+    if (SERVER) return start(await rpc("signup_teacher", { p_name: name, p_email: email, p_password: password, p_consent: true }), true);
+    const all = devProfiles();
+    if (all[email]) throw new Error("This email already has an account. Sign in instead.");
+    all[email] = { role: "teacher", name, grade: null, hash: await hash(email + password), progress: {}, created: Date.now() };
+    put("edu_device_profiles", all);
+    return start({ token: "device", username: email, name, grade: null, role: "teacher", device: true }, true);
+  }
+  async function login(username, secret) {
+    username = (username || "").trim().toLowerCase();
+    if (SERVER) return start(await rpc("login", { p_username: username, p_secret: secret }));
+    const p = devProfiles()[username];
+    if (!p || p.hash !== await hash(username + secret)) throw new Error("Wrong username or PIN/password.");
+    return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, device: true });
+  }
+  async function logout() {
+    await flush(true);
+    if (SERVER && user && user.token) rpc("logout", { p_token: user.token }).catch(() => {});
+    clearMine(); user = null; drop("edu_user");
+  }
+  async function refresh() {                      // check the saved session is still valid (server only)
+    if (!SERVER || !user || user.device) return user;
+    try { const u = await rpc("me", { p_token: user.token }); user = { ...user, ...u }; put("edu_user", user); }
+    catch (e) { if (/sign in again/i.test(e.message)) { clearMine(); user = null; drop("edu_user"); } }
+    return user;
+  }
+  function clearMine() { myKeys().forEach(drop); }
+
+  /* ---- progress sync: every write to a "mine" key is saved for the signed-in player ---- */
+  Storage.prototype.setItem = function (k, v) {
+    rawSet.call(this, k, v);
+    if (this === localStorage && user && MINE.test(k)) { dirty[k] = v; clearTimeout(saveTimer); saveTimer = setTimeout(() => flush(), 1500); }
+  };
+  async function pull() {
+    if (!user) return;
+    let items = {};
+    if (SERVER && !user.device) { try { items = await rpc("load_progress", { p_token: user.token }) || {}; } catch {} }
+    else items = (devProfiles()[user.username] || {}).progress || {};
+    for (const [k, v] of Object.entries(items)) if (MINE.test(k)) rawSet.call(localStorage, k, typeof v === "string" ? v : JSON.stringify(v));
+    if (user.grade && !items.edu_grade) put("edu_grade", user.grade);
+  }
+  async function flush(final) {
+    clearTimeout(saveTimer);
+    const items = dirty; dirty = {};
+    if (user && Object.keys(items).length) {
+      if (SERVER && !user.device) { try { await rpc("save_progress", { p_token: user.token, p_items: items }); } catch { Object.assign(dirty, items); } }
+      else { const all = devProfiles(), p = all[user.username]; if (p) { Object.assign(p.progress, items); put("edu_device_profiles", all); } }
+    }
+    await flushEvents(final);
+  }
+
+  /* ---- usage events for the admin dashboard ---- */
+  let queue = [], evTimer = null;
+  function track(e) {                             // { event: "answer"|"start", game, grade, lesson, skill, correct }
+    queue.push({ ...e, event: e.event || "answer" });
+    if (e.game) put("edu_last", { game: e.game, at: Date.now() });
+    if (queue.length >= 15) flushEvents(); else { clearTimeout(evTimer); evTimer = setTimeout(flushEvents, 20000); }
+  }
+  async function flushEvents() {
+    clearTimeout(evTimer);
+    if (!queue.length) return;
+    const items = queue.splice(0, 200);
+    if (SERVER) { try { await rpc("log_events", { p_token: user && !user.device ? user.token : null, p_items: items }); } catch { queue.unshift(...items); } }
+    else {   // device mode: keep a small local log so the admin page can show something on this device
+      const log = get("edu_device_events", []); items.forEach(i => log.push({ ...i, role: user ? user.role : "guest", who: user ? user.username : null, at: Date.now() }));
+      put("edu_device_events", log.slice(-5000));
+    }
+  }
+  addEventListener("pagehide", () => flush(true));
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(true); });
+
+  /* ---- admin dashboard data ---- */
+  async function adminStats() {
+    if (SERVER) return rpc("admin_stats", { p_token: user && user.token });
+    if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only.");
+    // device mode: the same shape, built from this device's accounts and events
+    const profs = Object.values(devProfiles()), ev = get("edu_device_events", []), day = 864e5, now = Date.now();
+    const by = (arr, f) => arr.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
+    const ans = ev.filter(e => e.event === "answer");
+    return {
+      totals: { students: profs.filter(p => p.role === "student").length, teachers: profs.filter(p => p.role !== "student").length, active7: new Set(ev.filter(e => e.at > now - 7 * day).map(e => e.who)).size, new7: profs.filter(p => p.created > now - 7 * day).length },
+      answers: { total: ans.length, correct: ans.filter(e => e.correct).length, last7: ans.filter(e => e.at > now - 7 * day).length },
+      games: Object.entries(by(ev, e => e.game)).map(([game, xs]) => ({ game, plays: xs.filter(e => e.event === "start").length, answers: xs.filter(e => e.event === "answer").length, correct: xs.filter(e => e.correct).length })).sort((a, b) => b.answers - a.answers),
+      grades: Object.entries(by(profs.filter(p => p.role === "student"), p => p.grade)).map(([grade, xs]) => ({ grade, students: xs.length })),
+      skills: Object.entries(by(ans, e => `${e.grade}|${e.lesson}|${e.skill || ""}`)).map(([k, xs]) => { const [grade, lesson, skill] = k.split("|"); return { grade, lesson, skill, answers: xs.length, correct: xs.filter(e => e.correct).length }; }).sort((a, b) => b.answers - a.answers).slice(0, 60),
+      days: Array.from({ length: 30 }, (_, i) => { const d0 = new Date(now - (29 - i) * day).toISOString().slice(0, 10); const same = t => new Date(t).toISOString().slice(0, 10) === d0;
+        return { day: d0, students: profs.filter(p => p.role === "student" && same(p.created)).length, teachers: profs.filter(p => p.role !== "student" && same(p.created)).length, answers: ans.filter(e => same(e.at)).length }; }),
+      device: true,
+    };
+  }
+
+  return {
+    get user() { return user; }, get server() { return SERVER; },
+    role: () => (user ? user.role : null),
+    signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, adminStats,
+    // admin: delete an account (privacy request); returns how many were deleted
+    adminDelete: async username => {
+      username = (username || "").trim().toLowerCase();
+      if (SERVER) return (await rpc("admin_delete_user", { p_token: user && user.token, p_username: username })).deleted;
+      const all = devProfiles(); if (!all[username] || username === (user && user.username)) return 0;
+      delete all[username]; put("edu_device_profiles", all); return 1;
+    },
+    setGrade: g => { if (!user) return; user.grade = g; put("edu_user", user); if (SERVER && !user.device) rpc("set_grade", { p_token: user.token, p_grade: g }).catch(() => {}); },
+  };
+})();
+
 const BRAND = { en: "Math Games", ar: "\u0623\u0644\u0639\u0627\u0628 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0627\u062a" };
 const T = {
   en: { title: `Learn by <em>playing</em>`, sub: "Learning games for KG to Grade 6 \u2014 new questions every round, explanations for every mistake, in class or at home.",
         grade: "Grade", all: "All", play: "Play now", soon: "Coming soon", games: n => `${n} game${n === 1 ? "" : "s"}`,
         none: "No games for this grade yet. They are on the way.", grades: g => g.length > 1 ? `Grades ${g.at(0)}\u2013${g.at(-1)}` : g[0] === "KG" ? "KG" : `Grade ${g[0]}`,
         foot: `${BRAND.en} \u00b7 works offline after the first visit`, how: "Add to your home screen",
-        howSteps: ["iPad / iPhone: open this page in Safari, tap Share, then Add to Home Screen.", "Android: open it in Chrome, tap the menu \u22ee, then Add to Home screen or Install app.", "The app opens full screen and updates itself when you are online."], close: "Close" },
+        howSteps: ["iPad / iPhone: open this page in Safari, tap Share, then Add to Home Screen.", "Android: open it in Chrome, tap the menu \u22ee, then Add to Home screen or Install app.", "The app opens full screen and updates itself when you are online."], close: "Close",
+        welcome: "Welcome! Who is playing?", student: "I'm a student", studentSub: "Play on your own. Your stars and scores are saved.", teacher: "I'm a teacher", teacherSub: "Class games with crews, and choose the lessons or skills.",
+        have: "I already have an account", guest: "Just look around", firstName: "First name or nickname", gradeL: "Grade", pin: "Choose a 4-digit PIN", pin2: "Repeat the PIN",
+        consentKid: "My parent agrees that I use this app.", what: "What do we save?", create: "Create my account", back: "Back", tName: "Your name", email: "Email", password: "Password (at least 8 characters)",
+        consentT: "I accept the terms and the privacy notice.", createT: "Create teacher account", signinT: "Sign in", userL: "Username or email", secretL: "PIN or password", signin: "Sign in",
+        doneT: "Your account is ready!", doneS: "Write down your username and PIN. You need them to sign in on another device.", yourUser: "Your username", go: "Let's play", pinDiff: "The two PINs are different.",
+        privT: "What we save", priv: ["Students: first name or nickname, grade, the PIN (stored scrambled), stars and scores.", "Teachers: name, email and password (stored scrambled).", "Which questions were answered and whether they were right, to make the games better.", "No photos, no location, no ads and no chat.", "A parent or teacher can ask us to delete an account at any time."],
+        deviceNote: "For now, accounts are saved on this device only.", signedAs: "Signed in as", out: "Sign out", sw: "Switch account", admin: "Admin dashboard", roleS: "Student", roleT: "Teacher", roleA: "Admin",
+        hi: n => `Welcome back, ${n}!`, stars: "stars on the map", best: "best in Minute Challenge", last: "Last played", cont: "Continue", noProg: "Play a game and your progress shows here.", wait: "Please wait\u2026" },
   ar: { title: `\u062a\u0639\u0644\u0651\u0645 \u0648\u0623\u0646\u062a <em>\u062a\u0644\u0639\u0628</em>`, sub: "\u0623\u0644\u0639\u0627\u0628 \u062a\u0639\u0644\u064a\u0645\u064a\u0629 \u0645\u0646 \u0627\u0644\u0631\u0648\u0636\u0629 \u062d\u062a\u0649 \u0627\u0644\u0635\u0641 \u0627\u0644\u0633\u0627\u062f\u0633 \u2014 \u0623\u0633\u0626\u0644\u0629 \u062c\u062f\u064a\u062f\u0629 \u0641\u064a \u0643\u0644 \u062c\u0648\u0644\u0629\u060c \u0648\u0634\u0631\u062d \u0644\u0643\u0644 \u062e\u0637\u0623\u060c \u0641\u064a \u0627\u0644\u0641\u0635\u0644 \u0623\u0648 \u0641\u064a \u0627\u0644\u0628\u064a\u062a.",
         grade: "\u0627\u0644\u0635\u0641", all: "\u0627\u0644\u0643\u0644", play: "\u0627\u0644\u0639\u0628 \u0627\u0644\u0622\u0646", soon: "\u0642\u0631\u064a\u0628\u064b\u0627", games: n => n === 1 ? "\u0644\u0639\u0628\u0629 \u0648\u0627\u062d\u062f\u0629" : n === 2 ? "\u0644\u0639\u0628\u062a\u0627\u0646" : `${n} \u0623\u0644\u0639\u0627\u0628`,
         none: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0623\u0644\u0639\u0627\u0628 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0641 \u0628\u0639\u062f\u060c \u0648\u0647\u064a \u0641\u064a \u0627\u0644\u0637\u0631\u064a\u0642.", grades: g => { const n = x => x === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : x; return g.length > 1 ? `\u0645\u0646 ${n(g.at(0))} \u0625\u0644\u0649 ${n(g.at(-1))}` : g[0] === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : `\u0627\u0644\u0635\u0641 ${g[0]}`; },
         foot: `${BRAND.ar} \u00b7 \u062a\u0639\u0645\u0644 \u0628\u062f\u0648\u0646 \u0625\u0646\u062a\u0631\u0646\u062a \u0628\u0639\u062f \u0623\u0648\u0644 \u0632\u064a\u0627\u0631\u0629`, how: "\u0623\u0636\u0650\u0641\u0647 \u0625\u0644\u0649 \u0627\u0644\u0634\u0627\u0634\u0629 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629",
-        howSteps: ["\u0622\u064a\u0628\u0627\u062f / \u0622\u064a\u0641\u0648\u0646: \u0627\u0641\u062a\u062d \u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u062d\u0629 \u0641\u064a Safari\u060c \u0648\u0627\u0636\u063a\u0637 \u0645\u0634\u0627\u0631\u0643\u0629\u060c \u062b\u0645 Add to Home Screen.", "\u0623\u0646\u062f\u0631\u0648\u064a\u062f: \u0627\u0641\u062a\u062d\u0647\u0627 \u0641\u064a Chrome\u060c \u0648\u0627\u0636\u063a\u0637 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u22ee\u060c \u062b\u0645 Add to Home screen \u0623\u0648 Install app.", "\u064a\u0641\u062a\u062d \u0627\u0644\u062a\u0637\u0628\u064a\u0642 \u0628\u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629 \u0648\u064a\u062a\u062d\u062f\u0651\u062b \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627 \u0639\u0646\u062f \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a."], close: "\u0625\u063a\u0644\u0627\u0642" },
+        howSteps: ["\u0622\u064a\u0628\u0627\u062f / \u0622\u064a\u0641\u0648\u0646: \u0627\u0641\u062a\u062d \u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u062d\u0629 \u0641\u064a Safari\u060c \u0648\u0627\u0636\u063a\u0637 \u0645\u0634\u0627\u0631\u0643\u0629\u060c \u062b\u0645 Add to Home Screen.", "\u0623\u0646\u062f\u0631\u0648\u064a\u062f: \u0627\u0641\u062a\u062d\u0647\u0627 \u0641\u064a Chrome\u060c \u0648\u0627\u0636\u063a\u0637 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u22ee\u060c \u062b\u0645 Add to Home screen \u0623\u0648 Install app.", "\u064a\u0641\u062a\u062d \u0627\u0644\u062a\u0637\u0628\u064a\u0642 \u0628\u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629 \u0648\u064a\u062a\u062d\u062f\u0651\u062b \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627 \u0639\u0646\u062f \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a."], close: "\u0625\u063a\u0644\u0627\u0642",
+        welcome: "\u0623\u0647\u0644\u064b\u0627 \u0628\u0643! \u0645\u0646 \u064a\u0644\u0639\u0628\u061f", student: "\u0623\u0646\u0627 \u0637\u0627\u0644\u0628", studentSub: "\u0627\u0644\u0639\u0628 \u0648\u062d\u062f\u0643\u060c \u0648\u062a\u064f\u062d\u0641\u0638 \u0646\u062c\u0648\u0645\u0643 \u0648\u0646\u062a\u0627\u0626\u062c\u0643.", teacher: "\u0623\u0646\u0627 \u0645\u0639\u0644\u0645", teacherSub: "\u0623\u0644\u0639\u0627\u0628 \u0644\u0644\u0641\u0635\u0644 \u0645\u0639 \u0627\u0644\u0641\u0631\u0642\u060c \u0648\u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u062f\u0631\u0648\u0633 \u0623\u0648 \u0627\u0644\u0645\u0647\u0627\u0631\u0627\u062a.",
+        have: "\u0639\u0646\u062f\u064a \u062d\u0633\u0627\u0628", guest: "\u0623\u062a\u0641\u0631\u0651\u062c \u0641\u0642\u0637", firstName: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644 \u0623\u0648 \u0627\u0633\u0645 \u0645\u0633\u062a\u0639\u0627\u0631", gradeL: "\u0627\u0644\u0635\u0641", pin: "\u0627\u062e\u062a\u0631 \u0631\u0645\u0632\u064b\u0627 \u0645\u0646 4 \u0623\u0631\u0642\u0627\u0645", pin2: "\u0623\u0639\u062f \u0643\u062a\u0627\u0628\u0629 \u0627\u0644\u0631\u0645\u0632",
+        consentKid: "\u0648\u0644\u064a\u0651 \u0623\u0645\u0631\u064a \u0645\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0627\u0633\u062a\u062e\u062f\u0627\u0645\u064a \u0627\u0644\u062a\u0637\u0628\u064a\u0642.", what: "\u0645\u0627\u0630\u0627 \u0646\u062d\u0641\u0638\u061f", create: "\u0623\u0646\u0634\u0626 \u062d\u0633\u0627\u0628\u064a", back: "\u0631\u062c\u0648\u0639", tName: "\u0627\u0633\u0645\u0643", email: "\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a", password: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (8 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)",
+        consentT: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0627\u0644\u0634\u0631\u0648\u0637 \u0648\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629.", createT: "\u0623\u0646\u0634\u0626 \u062d\u0633\u0627\u0628 \u0645\u0639\u0644\u0645", signinT: "\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644", userL: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f", secretL: "\u0627\u0644\u0631\u0645\u0632 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631", signin: "\u062f\u062e\u0648\u0644",
+        doneT: "\u062d\u0633\u0627\u0628\u0643 \u062c\u0627\u0647\u0632!", doneS: "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0648\u0627\u0644\u0631\u0645\u0632 \u0641\u064a \u0645\u0643\u0627\u0646 \u0622\u0645\u0646\u060c \u0633\u062a\u062d\u062a\u0627\u062c\u0647\u0645\u0627 \u0644\u0644\u062f\u062e\u0648\u0644 \u0645\u0646 \u062c\u0647\u0627\u0632 \u0622\u062e\u0631.", yourUser: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645", go: "\u0647\u064a\u0627 \u0646\u0644\u0639\u0628", pinDiff: "\u0627\u0644\u0631\u0645\u0632\u0627\u0646 \u063a\u064a\u0631 \u0645\u062a\u0637\u0627\u0628\u0642\u064a\u0646.",
+        privT: "\u0645\u0627\u0630\u0627 \u0646\u062d\u0641\u0638\u061f", priv: ["\u0627\u0644\u0637\u0627\u0644\u0628: \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644 \u0623\u0648 \u0627\u0633\u0645 \u0645\u0633\u062a\u0639\u0627\u0631\u060c \u0648\u0627\u0644\u0635\u0641\u060c \u0648\u0627\u0644\u0631\u0645\u0632 (\u0645\u062d\u0641\u0648\u0638 \u0645\u0634\u0641\u0651\u0631\u064b\u0627)\u060c \u0648\u0627\u0644\u0646\u062c\u0648\u0645 \u0648\u0627\u0644\u0646\u062a\u0627\u0626\u062c.", "\u0627\u0644\u0645\u0639\u0644\u0645: \u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (\u0645\u062d\u0641\u0648\u0638\u0629 \u0645\u0634\u0641\u0651\u0631\u0629).", "\u0623\u064a \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0623\u064f\u062c\u064a\u0628\u062a \u0648\u0647\u0644 \u0643\u0627\u0646\u062a \u0635\u062d\u064a\u062d\u0629\u060c \u0644\u062a\u062d\u0633\u064a\u0646 \u0627\u0644\u0623\u0644\u0639\u0627\u0628.", "\u0644\u0627 \u0635\u0648\u0631 \u0648\u0644\u0627 \u0645\u0648\u0642\u0639 \u0648\u0644\u0627 \u0625\u0639\u0644\u0627\u0646\u0627\u062a \u0648\u0644\u0627 \u0645\u062d\u0627\u062f\u062b\u0627\u062a.", "\u064a\u0645\u0643\u0646 \u0644\u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 \u0623\u0648 \u0627\u0644\u0645\u0639\u0644\u0645 \u0637\u0644\u0628 \u062d\u0630\u0641 \u0627\u0644\u062d\u0633\u0627\u0628 \u0641\u064a \u0623\u064a \u0648\u0642\u062a."],
+        deviceNote: "\u0627\u0644\u062d\u0633\u0627\u0628\u0627\u062a \u0645\u062d\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062c\u0647\u0627\u0632 \u0641\u0642\u0637 \u062d\u0627\u0644\u064a\u064b\u0627.", signedAs: "\u0645\u0633\u062c\u0651\u0644 \u0628\u0627\u0633\u0645", out: "\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c", sw: "\u062a\u0628\u062f\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628", admin: "\u0644\u0648\u062d\u0629 \u0627\u0644\u0625\u062f\u0627\u0631\u0629", roleS: "\u0637\u0627\u0644\u0628", roleT: "\u0645\u0639\u0644\u0645", roleA: "\u0645\u062f\u064a\u0631",
+        hi: n => `\u0623\u0647\u0644\u064b\u0627 \u0628\u0639\u0648\u062f\u062a\u0643 \u064a\u0627 ${n}!`, stars: "\u0646\u062c\u0645\u0629 \u0641\u064a \u0627\u0644\u062e\u0631\u064a\u0637\u0629", best: "\u0623\u0641\u0636\u0644 \u0646\u062a\u064a\u062c\u0629 \u0641\u064a \u062a\u062d\u062f\u0651\u064a \u0627\u0644\u062f\u0642\u064a\u0642\u0629", last: "\u0622\u062e\u0631 \u0644\u0639\u0628\u0629", cont: "\u0623\u0643\u0645\u0644", noProg: "\u0627\u0644\u0639\u0628 \u0644\u0639\u0628\u0629 \u0648\u0633\u064a\u0638\u0647\u0631 \u062a\u0642\u062f\u0651\u0645\u0643 \u0647\u0646\u0627.", wait: "\u0644\u062d\u0638\u0629\u2026" },
 };
 const GRADES = ["KG", "1", "2", "3", "4", "5", "6"];
 // The catalogue: ready games link to their folder; the rest are on the roadmap.
@@ -186,7 +433,7 @@ function load(k, d) { try { const v = localStorage.getItem(k); return v === null
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 let lang = load("edu_lang", "en"), grade = load("edu_hubGrade", "all");
 
-function render() {
+var render = function () {
   const t = T[lang];
   document.documentElement.lang = lang; document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   $("lEn").setAttribute("aria-pressed", String(lang === "en")); $("lAr").setAttribute("aria-pressed", String(lang === "ar"));
@@ -213,7 +460,83 @@ $("lAr").addEventListener("click", () => { lang = "ar"; save("edu_lang", lang); 
 $("fHow").addEventListener("click", () => ($("ovHow").hidden = false));
 $("howClose").addEventListener("click", () => ($("ovHow").hidden = true));
 document.addEventListener("keydown", e => { if (e.key === "Escape") $("ovHow").hidden = true; });
+/* ================= accounts ================= */
+const GRADE_OPTS = [["KG", "KG"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"], ["6", "6"]];
+const NAME_OF = id => (GAMES.find(g => g.id === id) || {})[lang] ? GAMES.find(g => g.id === id)[lang][0] : id;
+const escH = x => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+let view = "choose";
+function welcome(v) {
+  view = v || "choose"; const t = T[lang], w = $("welcome");
+  $("ovWelcome").hidden = false;
+  const grades = sel => `<select id="fGrade">${GRADE_OPTS.map(([g, n]) => `<option value="${g}"${g === sel ? " selected" : ""}>${lang === "ar" && g === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : n}</option>`).join("")}</select>`;
+  const device = EDU.server ? "" : `<p class="note2">${t.deviceNote}</p>`;
+  if (view === "choose") w.innerHTML = `<h3>${t.welcome}</h3><div class="who"><button id="wS"><b>${t.student}</b><span>${t.studentSub}</span></button><button id="wT"><b>${t.teacher}</b><span>${t.teacherSub}</span></button></div>
+    <div class="links"><button id="wIn">${t.have}</button><button id="wG">${t.guest}</button></div>`;
+  if (view === "student") w.innerHTML = `<h3>${t.student}</h3><div class="form"><label>${t.firstName}<input id="fName" maxlength="20" autocomplete="given-name"></label>
+    <label>${t.gradeL}${grades(load("edu_grade", "4"))}</label>
+    <div class="two"><label>${t.pin}<input id="fPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" type="password" autocomplete="new-password"></label><label>${t.pin2}<input id="fPin2" inputmode="numeric" pattern="[0-9]*" maxlength="4" type="password" autocomplete="new-password"></label></div>
+    <label class="chk"><input type="checkbox" id="fOk"><span>${t.consentKid} <button class="lnk" id="wWhat" type="button">${t.what}</button></span></label>
+    <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.create}</button>${device}<div class="links"><button id="wBack">${t.back}</button></div></div>`;
+  if (view === "teacher") w.innerHTML = `<h3>${t.teacher}</h3><div class="form"><label>${t.tName}<input id="fName" maxlength="40" autocomplete="name"></label>
+    <label>${t.email}<input id="fEmail" type="email" autocomplete="email" dir="ltr"></label><label>${t.password}<input id="fPass" type="password" autocomplete="new-password" dir="ltr"></label>
+    <label class="chk"><input type="checkbox" id="fOk"><span>${t.consentT} <button class="lnk" id="wWhat" type="button">${t.what}</button></span></label>
+    <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.createT}</button>${device}<div class="links"><button id="wBack">${t.back}</button></div></div>`;
+  if (view === "signin") w.innerHTML = `<h3>${t.signinT}</h3><div class="form"><label>${t.userL}<input id="fUser" autocomplete="username" dir="ltr" autocapitalize="none"></label>
+    <label>${t.secretL}<input id="fSecret" type="password" autocomplete="current-password" dir="ltr"></label>
+    <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.signin}</button>${device}<div class="links"><button id="wBack">${t.back}</button></div></div>`;
+  if (view === "done") w.innerHTML = `<h3>${t.doneT}</h3><p>${t.doneS}</p><div class="ucard">${t.yourUser}<b>${escH(EDU.user.username)}</b></div><button class="btn" id="fDone">${t.go}</button>`;
+  if (view === "privacy") w.innerHTML = `<h3>${t.privT}</h3><ul class="plist">${t.priv.map(p => `<li>${p}</li>`).join("")}</ul><div class="links" style="margin-top:12px"><button id="wBack2">${t.back}</button></div>`;
+  const on = (id, fn) => $(id) && $(id).addEventListener("click", fn);
+  let from = view;
+  on("wS", () => welcome("student")); on("wT", () => welcome("teacher")); on("wIn", () => welcome("signin"));
+  on("wG", () => { save("edu_guest", true); $("ovWelcome").hidden = true; render(); });
+  on("wBack", () => welcome("choose")); on("wWhat", () => { welcome.ret = from; welcome("privacy"); }); on("wBack2", () => welcome(welcome.ret || "choose"));
+  on("fDone", () => { $("ovWelcome").hidden = true; render(); });
+  on("fGo", async () => {
+    const err = $("fErr"), btn = $("fGo"); err.textContent = ""; btn.disabled = true; btn.textContent = t.wait;
+    try {
+      if (view === "student") {
+        if ($("fPin").value !== $("fPin2").value) throw new Error(t.pinDiff);
+        await EDU.signupStudent({ name: $("fName").value, grade: $("fGrade").value, pin: $("fPin").value, consent: $("fOk").checked });
+        welcome("done"); return;
+      }
+      if (view === "teacher") await EDU.signupTeacher({ name: $("fName").value, email: $("fEmail").value, password: $("fPass").value, consent: $("fOk").checked });
+      if (view === "signin") await EDU.login($("fUser").value, $("fSecret").value);
+      $("ovWelcome").hidden = true; grade = "all"; render();
+    } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = view === "teacher" ? t.createT : view === "signin" ? t.signin : t.create; }
+  });
+  const first = w.querySelector("input,button"); first && first.focus();
+}
+function renderAccount() {
+  const t = T[lang], u = EDU.user, btn = $("acctBtn");
+  btn.hidden = false;
+  btn.innerHTML = u ? `<i>${escH(u.name[0].toUpperCase())}</i>${escH(u.name)}` : t.signin;
+  // student progress card
+  const box = $("mine");
+  if (!u || u.role !== "student") { box.hidden = true; return; }
+  const g = load("edu_grade", u.grade), maps = load("map_progress_" + g, {}), stars = Object.values(maps).reduce((a, b) => a + b, 0);
+  let best = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("minute_best_" + g + "_")) best = Math.max(best, +localStorage.getItem(k) || 0); } } catch {}
+  const last = load("edu_last", null), lastG = last && GAMES.find(x => x.id === last.game && x.ready);
+  box.hidden = false;
+  box.innerHTML = `<img src="crew/omar_celebrate.png" alt=""><div><h2>${t.hi(escH(u.name))}</h2><div class="facts">${stars || best || lastG ? `<span><b>${stars}</b>${t.stars}</span><span><b>${best}</b>${t.best}</span>${lastG ? `<span>${t.last}: <b style="font-size:16px">${lastG[lang][0]}</b></span>` : ""}` : `<span>${t.noProg}</span>`}</div></div>${lastG ? `<a class="btnc" href="${lastG.href}">${t.cont}</a>` : ""}`;
+}
+function acctMenu() {
+  const t = T[lang], u = EDU.user;
+  if (!u) { welcome("choose"); return; }
+  const roleName = u.role === "student" ? t.roleS : u.role === "admin" ? t.roleA : t.roleT;
+  const canAdmin = u.role === "admin" || (!EDU.server && u.role === "teacher");
+  $("acctBox").innerHTML = `<h3>${t.signedAs}</h3><p><b>${escH(u.name)}</b> \u00b7 ${roleName}${u.grade ? ` \u00b7 ${lang === "ar" ? "\u0627\u0644\u0635\u0641" : "Grade"} ${u.grade}` : ""}<br><span class="note2" dir="ltr">${escH(u.username)}</span></p>
+    <div class="arow">${canAdmin ? `<a href="admin/">${t.admin}</a>` : ""}<button id="aSwitch">${t.sw}</button><button id="aOut">${t.out}</button><button id="aClose">${t.close}</button></div>`;
+  $("ovAcct").hidden = false;
+  $("aClose").addEventListener("click", () => ($("ovAcct").hidden = true));
+  $("aOut").addEventListener("click", async () => { await EDU.logout(); try { localStorage.removeItem("edu_guest"); } catch {} $("ovAcct").hidden = true; render(); welcome("choose"); });
+  $("aSwitch").addEventListener("click", async () => { await EDU.logout(); $("ovAcct").hidden = true; render(); welcome("signin"); });
+}
+$("acctBtn").addEventListener("click", acctMenu);
+const _render = render;
+render = function () { _render(); renderAccount(); };
 render();
+EDU.refresh().then(() => { render(); if (!EDU.user && !load("edu_guest", false)) welcome("choose"); });
 </script>
 
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});</script>
