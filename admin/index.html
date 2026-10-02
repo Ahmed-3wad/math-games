@@ -14,7 +14,7 @@
 <link rel="icon" href="../icon-192.png">
 <title>Admin Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Cairo:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
 /* Layout: summary first (six headline numbers), then one daily-activity chart each for answers and sign-ups,
    then the detail tables (games, grades, weakest skills, all skills). Same navy/gold as the app, deliberately dark. */
@@ -46,9 +46,9 @@ button,input{font:inherit;color:inherit}
 .tip{position:absolute;pointer-events:none;background:#020B26;border:1px solid var(--silver);border-radius:8px;padding:6px 10px;font-size:13px;white-space:nowrap;transform:translate(-50%,-110%)}
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
-th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:start;vertical-align:middle}
 th{color:var(--muted);font-weight:600;font-size:12.5px}
-td.n,th.n{text-align:right}
+td.n,th.n{text-align:end}
 .acc{display:flex;align-items:center;gap:8px;justify-content:flex-end}
 .acc i{display:block;height:8px;border-radius:4px;background:var(--gold);min-width:2px}
 .acc i.low{background:var(--coral)}
@@ -77,7 +77,7 @@ tr.row:hover td{background:rgba(252,165,0,.08)}
 .tag.student{background:rgba(61,196,138,.18);color:#7FE3B6}
 .tag.teacher{background:rgba(252,165,0,.18);color:#FFC94D}
 .tag.admin{background:rgba(237,70,103,.2);color:#FF8FA6}
-.tag.lock{background:rgba(237,70,103,.2);color:#FF8FA6;margin-left:6px}
+.tag.lock{background:rgba(237,70,103,.2);color:#FF8FA6;margin-inline-start:6px}
 a.mail{color:var(--gold);word-break:break-all}
 .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px}
 .facts span{display:block;color:var(--muted);font-size:12.5px}
@@ -89,44 +89,63 @@ a.mail{color:var(--gold);word-break:break-all}
 #tUsers td,#oRecent td{white-space:nowrap}
 @media (max-width:640px){#who{order:9;flex-basis:100%;overflow-wrap:anywhere}}
 
+/* Arabic: Cairo font, charts stay left-to-right */
+html[dir="rtl"]{--display:"Cairo","Nunito",sans-serif;--body:"Cairo","Segoe UI",sans-serif}
+.chart{direction:ltr}
+/* light colours (Settings &#x2192; Colours on the home screen) */
+html[data-theme="light"]{--deep:#EEF2FA;--stage:#FFFFFF;--panel:#E3E9F6;--line:#D6DDEC;--silver:#33415F;--muted:#5B6888;--gold:#C97A00;--ink:#FFFFFF;color-scheme:light}
+html[data-theme="light"] body{color:#0B1B3F}
+html[data-theme="light"] .b,html[data-theme="light"] .chips button,html[data-theme="light"] .ccard{background:#fff;border-color:#C5CEE3;color:#0B1B3F}
+html[data-theme="light"] .b.gold,html[data-theme="light"] .chips button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#fff}
+html[data-theme="light"] .kpi,html[data-theme="light"] .panel{box-shadow:0 2px 10px rgba(11,27,63,.06)}
+html[data-theme="light"] .tools input,html[data-theme="light"] .tools select,html[data-theme="light"] .form2 input,html[data-theme="light"] .form2 select,html[data-theme="light"] .login input,html[data-theme="light"] .del input{background:#F6F8FD;border-color:#B9C3DA;color:#0B1B3F}
+html[data-theme="light"] .tag.student{background:#DDF3E9;color:#1E7A52}
+html[data-theme="light"] .tag.teacher{background:#FBEBCB;color:#8A5300}
+html[data-theme="light"] .tag.admin,html[data-theme="light"] .tag.lock{background:#FBE0E6;color:#B3203F}
+html[data-theme="light"] .err{color:#C0264A}
+html[data-theme="light"] .yes{color:#1E7A52}
+html[data-theme="light"] .no{color:#C0264A}
+html[data-theme="light"] .pinbox b{color:#1E7A52}
+html[data-theme="light"] tr.row:hover td{background:#FFF5E0}
+
 </style>
 </head>
 <body>
 
-<div class="wrap">
+<div class="wrap" data-ar-title="&#x644;&#x648;&#x62d;&#x629; &#x627;&#x644;&#x625;&#x62f;&#x627;&#x631;&#x629;">
   <header class="bar">
-    <h1><span>Admin</span> dashboard</h1><span class="spacer"></span>
+    <h1 data-ar="<span>&#x644;&#x648;&#x62d;&#x629;</span> &#x627;&#x644;&#x625;&#x62f;&#x627;&#x631;&#x629;"><span>Admin</span> dashboard</h1><span class="spacer"></span>
     <span class="note" id="who"></span>
-    <button class="b" id="refresh" hidden>Refresh</button>
-    <a class="b gold" href="accounts.html">All accounts</a>
-    <a class="b" href="../">Back to the app</a>
+    <button class="b" id="refresh" hidden data-ar="&#x62a;&#x62d;&#x62f;&#x64a;&#x62b;">Refresh</button>
+    <a class="b gold" href="accounts.html" data-ar="&#x643;&#x644; &#x627;&#x644;&#x62d;&#x633;&#x627;&#x628;&#x627;&#x62a;">All accounts</a>
+    <a class="b" href="../" data-ar="&#x627;&#x644;&#x639;&#x648;&#x62f;&#x629; &#x625;&#x644;&#x649; &#x627;&#x644;&#x62a;&#x637;&#x628;&#x64a;&#x642;">Back to the app</a>
   </header>
 
   <section class="login" id="login" hidden>
-    <h2>Sign in</h2>
-    <p class="note" id="loginNote">Use the admin teacher account.</p>
-    <label>Username or email<input id="u" autocomplete="username" autocapitalize="none"></label>
-    <label>Password<input id="p" type="password" autocomplete="current-password"></label>
+    <h2 data-ar="&#x62a;&#x633;&#x62c;&#x64a;&#x644; &#x627;&#x644;&#x62f;&#x62e;&#x648;&#x644;">Sign in</h2>
+    <p class="note" id="loginNote" data-ar="&#x627;&#x633;&#x62a;&#x62e;&#x62f;&#x645; &#x62d;&#x633;&#x627;&#x628; &#x627;&#x644;&#x645;&#x639;&#x644;&#x645; &#x627;&#x644;&#x645;&#x62f;&#x64a;&#x631;.">Use the admin teacher account.</p>
+    <label><span data-ar="&#x627;&#x633;&#x645; &#x627;&#x644;&#x645;&#x633;&#x62a;&#x62e;&#x62f;&#x645; &#x623;&#x648; &#x627;&#x644;&#x628;&#x631;&#x64a;&#x62f;">Username or email</span><input id="u" autocomplete="username" autocapitalize="none"></label>
+    <label><span data-ar="&#x643;&#x644;&#x645;&#x629; &#x627;&#x644;&#x645;&#x631;&#x648;&#x631;">Password</span><input id="p" type="password" autocomplete="current-password"></label>
     <div class="err" id="err"></div>
-    <button id="go">Sign in</button>
+    <button id="go" data-ar="&#x62f;&#x62e;&#x648;&#x644;">Sign in</button>
   </section>
 
   <main id="dash" hidden style="display:flex;flex-direction:column;gap:18px">
     <p class="note" id="mode"></p>
     <div class="kpis" id="kpis"></div>
     <div class="grid2">
-      <section class="panel"><h2>Answers per day &#xb7; last 30 days</h2><div class="chart" id="cAnswers"></div></section>
-      <section class="panel"><h2>New accounts per day &#xb7; last 30 days</h2><div class="chart" id="cSign"></div></section>
+      <section class="panel"><h2 data-ar="&#x627;&#x644;&#x625;&#x62c;&#x627;&#x628;&#x627;&#x62a; &#x64a;&#x648;&#x645;&#x64a;&#x64b;&#x627; &#xb7; &#x622;&#x62e;&#x631; 30 &#x64a;&#x648;&#x645;&#x64b;&#x627;">Answers per day &#xb7; last 30 days</h2><div class="chart" id="cAnswers"></div></section>
+      <section class="panel"><h2 data-ar="&#x627;&#x644;&#x62d;&#x633;&#x627;&#x628;&#x627;&#x62a; &#x627;&#x644;&#x62c;&#x62f;&#x64a;&#x62f;&#x629; &#x64a;&#x648;&#x645;&#x64a;&#x64b;&#x627; &#xb7; &#x622;&#x62e;&#x631; 30 &#x64a;&#x648;&#x645;&#x64b;&#x627;">New accounts per day &#xb7; last 30 days</h2><div class="chart" id="cSign"></div></section>
     </div>
     <div class="grid2">
-      <section class="panel"><h2>Games</h2><div class="tw" id="tGames"></div></section>
-      <section class="panel"><h2>Students by grade</h2><div class="tw" id="tGrades"></div></section>
+      <section class="panel"><h2 data-ar="&#x627;&#x644;&#x623;&#x644;&#x639;&#x627;&#x628;">Games</h2><div class="tw" id="tGames"></div></section>
+      <section class="panel"><h2 data-ar="&#x627;&#x644;&#x637;&#x644;&#x627;&#x628; &#x62d;&#x633;&#x628; &#x627;&#x644;&#x635;&#x641;">Students by grade</h2><div class="tw" id="tGrades"></div></section>
     </div>
-    <section class="panel"><h2>Weakest skills <span class="note">(at least 10 answers, lowest accuracy first)</span></h2><div class="tw" id="tWeak"></div></section>
-    <section class="panel"><h2>Most played lessons and skills</h2><div class="tw" id="tSkills"></div></section>
-    <section class="panel"><h2>Delete an account</h2>
-      <p class="note">For a parent or teacher who asks to delete an account. Their stars, scores and sign-in are removed; past answers stay only as anonymous totals.</p>
-      <div class="del"><input id="delUser" placeholder="username, e.g. omar482, or teacher email" autocapitalize="none"><button class="b" id="delBtn">Delete</button></div>
+    <section class="panel"><h2 data-ar="&#x623;&#x636;&#x639;&#x641; &#x627;&#x644;&#x645;&#x647;&#x627;&#x631;&#x627;&#x62a; <span class=&quot;note&quot;>(10 &#x625;&#x62c;&#x627;&#x628;&#x627;&#x62a; &#x639;&#x644;&#x649; &#x627;&#x644;&#x623;&#x642;&#x644;&#x60c; &#x627;&#x644;&#x623;&#x642;&#x644; &#x635;&#x648;&#x627;&#x628;&#x64b;&#x627; &#x623;&#x648;&#x644;&#x64b;&#x627;)</span>">Weakest skills <span class="note">(at least 10 answers, lowest accuracy first)</span></h2><div class="tw" id="tWeak"></div></section>
+    <section class="panel"><h2 data-ar="&#x623;&#x643;&#x62b;&#x631; &#x627;&#x644;&#x62f;&#x631;&#x648;&#x633; &#x648;&#x627;&#x644;&#x645;&#x647;&#x627;&#x631;&#x627;&#x62a; &#x644;&#x639;&#x628;&#x64b;&#x627;">Most played lessons and skills</h2><div class="tw" id="tSkills"></div></section>
+    <section class="panel"><h2 data-ar="&#x62d;&#x630;&#x641; &#x62d;&#x633;&#x627;&#x628;">Delete an account</h2>
+      <p class="note" data-ar="&#x644;&#x648;&#x644;&#x64a;&#x651; &#x623;&#x645;&#x631; &#x623;&#x648; &#x645;&#x639;&#x644;&#x645; &#x64a;&#x637;&#x644;&#x628; &#x62d;&#x630;&#x641; &#x62d;&#x633;&#x627;&#x628;. &#x62a;&#x64f;&#x62d;&#x630;&#x641; &#x627;&#x644;&#x646;&#x62c;&#x648;&#x645; &#x648;&#x627;&#x644;&#x646;&#x62a;&#x627;&#x626;&#x62c; &#x648;&#x627;&#x644;&#x62f;&#x62e;&#x648;&#x644;&#x60c; &#x648;&#x62a;&#x628;&#x642;&#x649; &#x627;&#x644;&#x625;&#x62c;&#x627;&#x628;&#x627;&#x62a; &#x627;&#x644;&#x633;&#x627;&#x628;&#x642;&#x629; &#x623;&#x631;&#x642;&#x627;&#x645;&#x64b;&#x627; &#x645;&#x62c;&#x645;&#x651;&#x639;&#x629; &#x628;&#x644;&#x627; &#x627;&#x633;&#x645;.">For a parent or teacher who asks to delete an account. Their stars, scores and sign-in are removed; past answers stay only as anonymous totals.</p>
+      <div class="del"><input id="delUser" placeholder="username, e.g. omar482, or teacher email" data-ar-ph="&#x627;&#x633;&#x645; &#x627;&#x644;&#x645;&#x633;&#x62a;&#x62e;&#x62f;&#x645; &#x645;&#x62b;&#x644; omar482 &#x623;&#x648; &#x628;&#x631;&#x64a;&#x62f; &#x627;&#x644;&#x645;&#x639;&#x644;&#x645;" autocapitalize="none"><button class="b" id="delBtn" data-ar="&#x62d;&#x630;&#x641;">Delete</button></div>
       <div class="err" id="delMsg"></div>
     </section>
   </main>
@@ -145,6 +164,57 @@ const EDU = (() => {
   const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
   const put = (k, v) => { try { rawSet.call(localStorage, k, JSON.stringify(v)); } catch {} };
   const drop = k => { try { rawRemove.call(localStorage, k); } catch {} };
+
+  /* ---- messages: the server and the checks speak English; Arabic is chosen by edu_lang (# = a number or a name) ---- */
+  const AR = {
+    "Wrong username or PIN/password.": "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0627\u0644\u0631\u0645\u0632/\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d.",
+    "Too many wrong tries. Try again in # minutes.": "\u0645\u062d\u0627\u0648\u0644\u0627\u062a \u062e\u0627\u0637\u0626\u0629 \u0643\u062b\u064a\u0631\u0629. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649 \u0628\u0639\u062f # \u062f\u0642\u064a\u0642\u0629.",
+    "Please sign in again.": "\u0633\u062c\u0651\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.",
+    "Admins only.": "\u0644\u0644\u0645\u062f\u064a\u0631 \u0641\u0642\u0637.",
+    "Teachers only.": "\u0644\u0644\u0645\u0639\u0644\u0645\u064a\u0646 \u0641\u0642\u0637.",
+    "A parent must agree before creating an account.": "\u064a\u062c\u0628 \u0623\u0646 \u064a\u0648\u0627\u0641\u0642 \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 \u0642\u0628\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062d\u0633\u0627\u0628.",
+    "The PIN must be 4 digits.": "\u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0627\u0644\u0631\u0645\u0632 4 \u0623\u0631\u0642\u0627\u0645.",
+    "Write a first name of 2 to 20 letters.": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u064b\u0627 \u0623\u0648\u0644 \u0645\u0646 2 \u0625\u0644\u0649 20 \u062d\u0631\u0641\u064b\u0627.",
+    "Choose a grade.": "\u0627\u062e\u062a\u0631 \u0627\u0644\u0635\u0641.",
+    "Please accept the terms.": "\u064a\u064f\u0631\u062c\u0649 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u0627\u0644\u0634\u0631\u0648\u0637.",
+    "Write your name.": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u0643.",
+    "Write a valid email address.": "\u0627\u0643\u062a\u0628 \u0628\u0631\u064a\u062f\u064b\u0627 \u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a\u064b\u0627 \u0635\u062d\u064a\u062d\u064b\u0627.",
+    "The password must be at least 8 characters.": "\u064a\u062c\u0628 \u0623\u0646 \u062a\u0643\u0648\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 8 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644.",
+    "This email already has an account. Sign in instead.": "\u0644\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f \u062d\u0633\u0627\u0628 \u0628\u0627\u0644\u0641\u0639\u0644. \u0633\u062c\u0651\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0628\u062f\u0644\u064b\u0627 \u0645\u0646 \u0630\u0644\u0643.",
+    "Could not reach the server. Check the internet.": "\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u062e\u0627\u062f\u0645. \u062a\u062d\u0642\u0651\u0642 \u0645\u0646 \u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a.",
+    "The current PIN is wrong.": "\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062d\u0627\u0644\u064a \u063a\u064a\u0631 \u0635\u062d\u064a\u062d.",
+    "The current password is wrong.": "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062d\u0627\u0644\u064a\u0629 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d\u0629.",
+    "Write a valid parent email, or leave it empty.": "\u0627\u0643\u062a\u0628 \u0628\u0631\u064a\u062f \u0648\u0644\u064a\u0651 \u0623\u0645\u0631 \u0635\u062d\u064a\u062d\u064b\u0627 \u0623\u0648 \u0627\u062a\u0631\u0643\u0647 \u0641\u0627\u0631\u063a\u064b\u0627.",
+    "Wrong username or recovery code.": "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d.",
+    "Wrong or expired code.": "\u0627\u0644\u0631\u0645\u0632 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d \u0623\u0648 \u0627\u0646\u062a\u0647\u062a \u0635\u0644\u0627\u062d\u064a\u062a\u0647.",
+    "Email codes are not ready yet. Students can use their recovery code.": "\u0631\u0645\u0648\u0632 \u0627\u0644\u0628\u0631\u064a\u062f \u063a\u064a\u0631 \u062c\u0627\u0647\u0632\u0629 \u0628\u0639\u062f. \u064a\u0645\u0643\u0646 \u0644\u0644\u0637\u0644\u0627\u0628 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639.",
+    "Email codes need the server. Students can use their recovery code.": "\u0631\u0645\u0648\u0632 \u0627\u0644\u0628\u0631\u064a\u062f \u062a\u062d\u062a\u0627\u062c \u0627\u0644\u062e\u0627\u062f\u0645. \u064a\u0645\u0643\u0646 \u0644\u0644\u0637\u0644\u0627\u0628 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639.",
+    "Email codes need the server.": "\u0631\u0645\u0648\u0632 \u0627\u0644\u0628\u0631\u064a\u062f \u062a\u062d\u062a\u0627\u062c \u0627\u0644\u062e\u0627\u062f\u0645.",
+    "Write your username or email.": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f.",
+    "Recovery codes are for student accounts.": "\u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u0644\u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0637\u0644\u0627\u0628 \u0641\u0642\u0637.",
+    "No class has this code. Check it with your teacher.": "\u0644\u0627 \u064a\u0648\u062c\u062f \u0641\u0635\u0644 \u0628\u0647\u0630\u0627 \u0627\u0644\u0643\u0648\u062f. \u062a\u0623\u0643\u0651\u062f \u0645\u0646\u0647 \u0645\u0639 \u0645\u0639\u0644\u0645\u0643.",
+    "Only student accounts join a class.": "\u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0637\u0644\u0627\u0628 \u0641\u0642\u0637 \u0647\u064a \u0627\u0644\u062a\u064a \u062a\u0646\u0636\u0645 \u0625\u0644\u0649 \u0627\u0644\u0641\u0635\u0648\u0644.",
+    "You are already in 10 classes. Leave one first.": "\u0623\u0646\u062a \u0641\u064a 10 \u0641\u0635\u0648\u0644 \u0628\u0627\u0644\u0641\u0639\u0644. \u063a\u0627\u062f\u0631 \u0623\u062d\u062f\u0647\u0627 \u0623\u0648\u0644\u064b\u0627.",
+    "Write a class name (up to 40 letters).": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0627\u0644\u0641\u0635\u0644 (\u062d\u062a\u0649 40 \u062d\u0631\u0641\u064b\u0627).",
+    "You can have up to 30 classes.": "\u064a\u0645\u0643\u0646\u0643 \u0625\u0646\u0634\u0627\u0621 30 \u0641\u0635\u0644\u064b\u0627 \u0639\u0644\u0649 \u0627\u0644\u0623\u0643\u062b\u0631.",
+    "This class was not found.": "\u0644\u0645 \u064a\u064f\u0639\u062b\u0631 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0641\u0635\u0644.",
+    "This student is not in the class.": "\u0647\u0630\u0627 \u0627\u0644\u0637\u0627\u0644\u0628 \u0644\u064a\u0633 \u0641\u064a \u0627\u0644\u0641\u0635\u0644.",
+    "Classes need the server. They work in the online app.": "\u0627\u0644\u0641\u0635\u0648\u0644 \u062a\u062d\u062a\u0627\u062c \u0627\u0644\u062e\u0627\u062f\u0645\u060c \u0648\u062a\u0639\u0645\u0644 \u0641\u064a \u0627\u0644\u062a\u0637\u0628\u064a\u0642 \u0639\u0644\u0649 \u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a.",
+    "No account called #.": "\u0644\u0627 \u064a\u0648\u062c\u062f \u062d\u0633\u0627\u0628 \u0628\u0627\u0633\u0645 #.",
+    "You cannot delete your own admin account here.": "\u0644\u0627 \u064a\u0645\u0643\u0646\u0643 \u062d\u0630\u0641 \u062d\u0633\u0627\u0628 \u0627\u0644\u0645\u062f\u064a\u0631 \u0645\u0646 \u0647\u0646\u0627.",
+    "The admin account cannot be deleted here.": "\u0644\u0627 \u064a\u0645\u0643\u0646 \u062d\u0630\u0641 \u062d\u0633\u0627\u0628 \u0627\u0644\u0645\u062f\u064a\u0631 \u0645\u0646 \u0647\u0646\u0627.",
+  };
+  const lang = () => (get("edu_lang", "en") === "ar" ? "ar" : "en");
+  function say(m) {
+    if (lang() !== "ar" || !m) return m;
+    m = String(m);
+    for (const k in AR) {
+      const [pre, post = null] = k.split("#");
+      if (post === null ? m === k : m.length >= pre.length + post.length && m.startsWith(pre) && m.endsWith(post)) return AR[k].replace("#", post === null ? "" : m.slice(pre.length, m.length - post.length));
+    }
+    return m;
+  }
+  const Err = m => new Error(say(m));
   // what belongs to a player and travels with the account
   const MINE = /^(edu_by_|edu_lessons_|edu_skills_|edu_grade$|edu_last$|map_progress_|minute_best_|minute_secs$|race_setup$|mm4_)/;
   const myKeys = () => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MINE.test(k)) out.push(k); } } catch {} return out; };
@@ -160,8 +230,8 @@ const EDU = (() => {
       body: JSON.stringify(args),
     });
     const text = await r.text(), data = text ? JSON.parse(text) : null;
-    if (!r.ok) throw new Error((data && (data.message || data.hint)) || "Could not reach the server. Check the internet.");
-    if (data && data.error) throw new Error(data.error);
+    if (!r.ok) throw Err((data && (data.message || data.hint)) || "Could not reach the server. Check the internet.");
+    if (data && data.error) throw Err(data.error);
     return data;
   }
 
@@ -181,19 +251,19 @@ const EDU = (() => {
 
   /* ---- shared checks (same rules as the server) ---- */
   function checkStudent(name, grade, pin, consent) {
-    if (!consent) throw new Error("A parent must agree before creating an account.");
-    if (!/^\d{4}$/.test(pin || "")) throw new Error("The PIN must be 4 digits.");
+    if (!consent) throw Err("A parent must agree before creating an account.");
+    if (!/^\d{4}$/.test(pin || "")) throw Err("The PIN must be 4 digits.");
     name = (name || "").trim();
-    if (name.length < 2 || name.length > 20) throw new Error("Write a first name of 2 to 20 letters.");
-    if (!["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
+    if (name.length < 2 || name.length > 20) throw Err("Write a first name of 2 to 20 letters.");
+    if (!["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw Err("Choose a grade.");
     return name;
   }
   function checkTeacher(name, email, password, consent) {
-    if (!consent) throw new Error("Please accept the terms.");
+    if (!consent) throw Err("Please accept the terms.");
     name = (name || "").trim(); email = (email || "").trim().toLowerCase();
-    if (name.length < 2 || name.length > 40) throw new Error("Write your name.");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Write a valid email address.");
-    if ((password || "").length < 8) throw new Error("The password must be at least 8 characters.");
+    if (name.length < 2 || name.length > 40) throw Err("Write your name.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw Err("Write a valid email address.");
+    if ((password || "").length < 8) throw Err("The password must be at least 8 characters.");
     return [name, email];
   }
 
@@ -217,7 +287,7 @@ const EDU = (() => {
   const cleanCode = c => (c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   function checkParent(e) {
     e = (e || "").trim().toLowerCase();
-    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Write a valid parent email, or leave it empty.");
+    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw Err("Write a valid parent email, or leave it empty.");
     return e;
   }
   async function signupStudent({ name, grade, pin, consent, parentEmail }) {
@@ -232,7 +302,7 @@ const EDU = (() => {
     [name, email] = checkTeacher(name, email, password, consent);
     if (SERVER) return start(await rpc("signup_teacher", { p_name: name, p_email: email, p_password: password, p_consent: true }), true);
     const all = devProfiles();
-    if (all[email]) throw new Error("This email already has an account. Sign in instead.");
+    if (all[email]) throw Err("This email already has an account. Sign in instead.");
     all[email] = { role: "teacher", name, grade: null, hash: await hash(email + password), progress: {}, created: Date.now() };
     put("edu_device_profiles", all);
     return start({ token: "device", username: email, name, grade: null, role: "teacher", device: true }, true);
@@ -241,7 +311,7 @@ const EDU = (() => {
     username = (username || "").trim().toLowerCase();
     if (SERVER) return start(await rpc("login", { p_username: username, p_secret: secret }));
     const p = devProfiles()[username];
-    if (!p || p.hash !== await hash(username + secret)) throw new Error("Wrong username or PIN/password.");
+    if (!p || p.hash !== await hash(username + secret)) throw Err("Wrong username or PIN/password.");
     return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, device: true });
   }
   async function logout() {
@@ -258,20 +328,20 @@ const EDU = (() => {
   function clearMine() { myKeys().forEach(drop); }
   // edit my own profile: name, grade (students), and a new PIN/password (needs the current one)
   async function updateProfile({ name, grade, oldSecret, newSecret, parentEmail }) {
-    if (!user) throw new Error("Please sign in again.");
+    if (!user) throw Err("Please sign in again.");
     const student = user.role === "student";
     name = (name || "").trim();
-    if (name.length < 2 || name.length > (student ? 20 : 40)) throw new Error(student ? "Write a first name of 2 to 20 letters." : "Write your name.");
-    if (student && !["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
-    if (newSecret && student && !/^\d{4}$/.test(newSecret)) throw new Error("The PIN must be 4 digits.");
-    if (newSecret && !student && newSecret.length < 8) throw new Error("The password must be at least 8 characters.");
+    if (name.length < 2 || name.length > (student ? 20 : 40)) throw Err(student ? "Write a first name of 2 to 20 letters." : "Write your name.");
+    if (student && !["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw Err("Choose a grade.");
+    if (newSecret && student && !/^\d{4}$/.test(newSecret)) throw Err("The PIN must be 4 digits.");
+    if (newSecret && !student && newSecret.length < 8) throw Err("The password must be at least 8 characters.");
     if (student && parentEmail !== undefined) parentEmail = checkParent(parentEmail);
     let u;
     if (SERVER && !user.device) u = await rpc("update_profile", { p_token: user.token, p_name: name, p_grade: student ? grade : null, p_old_secret: oldSecret || "", p_new_secret: newSecret || "", p_parent_email: student && parentEmail !== undefined ? parentEmail : null });
     else {
-      const all = devProfiles(), p = all[user.username]; if (!p) throw new Error("Please sign in again.");
+      const all = devProfiles(), p = all[user.username]; if (!p) throw Err("Please sign in again.");
       const pe = student && parentEmail !== undefined ? parentEmail || null : p.parent_email || null;
-      if (newSecret || pe !== (p.parent_email || null)) { if (p.hash !== await hash(user.username + (oldSecret || ""))) throw new Error(student ? "The current PIN is wrong." : "The current password is wrong."); }
+      if (newSecret || pe !== (p.parent_email || null)) { if (p.hash !== await hash(user.username + (oldSecret || ""))) throw Err(student ? "The current PIN is wrong." : "The current password is wrong."); }
       if (newSecret) p.hash = await hash(user.username + newSecret);
       p.name = name; if (student) { p.grade = grade; p.parent_email = pe; } put("edu_device_profiles", all);
       u = { name, grade: student ? grade : user.grade, parent_email: student ? pe : null };
@@ -284,37 +354,37 @@ const EDU = (() => {
 
   /* ---- forgot PIN / password ---- */
   async function newRecoveryCode(pin) {               // signed-in student; the old code stops working
-    if (!user || user.role !== "student") throw new Error("Recovery codes are for student accounts.");
+    if (!user || user.role !== "student") throw Err("Recovery codes are for student accounts.");
     if (SERVER && !user.device) return (recovery = (await rpc("new_recovery_code", { p_token: user.token, p_pin: pin || "" })).recovery);
     const all = devProfiles(), p = all[user.username];
-    if (!p || p.hash !== await hash(user.username + (pin || ""))) throw new Error("The current PIN is wrong.");
+    if (!p || p.hash !== await hash(user.username + (pin || ""))) throw Err("The current PIN is wrong.");
     recovery = newCode(); p.rhash = await hash(user.username + cleanCode(recovery)); put("edu_device_profiles", all);
     return recovery;
   }
   async function resetWithRecovery(username, code, newPin) {   // signs in; EDU.recovery holds the NEW code
     username = (username || "").trim().toLowerCase();
-    if (!/^\d{4}$/.test(newPin || "")) throw new Error("The PIN must be 4 digits.");
+    if (!/^\d{4}$/.test(newPin || "")) throw Err("The PIN must be 4 digits.");
     if (SERVER) return start(keepRecovery(await rpc("reset_with_recovery", { p_username: username, p_code: code, p_new_pin: newPin })));
     const all = devProfiles(), p = all[username];
-    if (!p || p.role !== "student" || !p.rhash || p.rhash !== await hash(username + cleanCode(code))) throw new Error("Wrong username or recovery code.");
+    if (!p || p.role !== "student" || !p.rhash || p.rhash !== await hash(username + cleanCode(code))) throw Err("Wrong username or recovery code.");
     recovery = newCode(); p.rhash = await hash(username + cleanCode(recovery)); p.hash = await hash(username + newPin); put("edu_device_profiles", all);
     return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, parent_email: p.parent_email || null, device: true });
   }
   async function requestReset(who) {                  // teacher email, student username or parent email \u2192 a code by email
-    if (!SERVER) throw new Error("Email codes need the server. Students can use their recovery code.");
+    if (!SERVER) throw Err("Email codes need the server. Students can use their recovery code.");
     return rpc("request_reset", { p_who: (who || "").trim() });
   }
   async function resetWithCode(username, code, newSecret) {
-    if (!SERVER) throw new Error("Email codes need the server.");
+    if (!SERVER) throw Err("Email codes need the server.");
     return start(await rpc("reset_with_code", { p_username: (username || "").trim().toLowerCase(), p_code: (code || "").trim(), p_new_secret: newSecret || "" }));
   }
 
   /* ---- classes (server only): teachers make classes with a join code, students join ---- */
   function classRpc(fn, args) {
-    if (!SERVER || !user || user.device) return Promise.reject(new Error("Classes need the server. They work in the online app."));
+    if (!SERVER || !user || user.device) return Promise.reject(Err("Classes need the server. They work in the online app."));
     return rpc(fn, { p_token: user.token, ...args });
   }
-  const classInfo = code => (SERVER ? rpc("class_info", { p_code: code || "" }) : Promise.reject(new Error("Classes need the server. They work in the online app.")));
+  const classInfo = code => (SERVER ? rpc("class_info", { p_code: code || "" }) : Promise.reject(Err("Classes need the server. They work in the online app.")));
   const classes = {
     info: classInfo,
     mine: () => classRpc("my_classes", {}),
@@ -328,6 +398,32 @@ const EDU = (() => {
     removeStudent: (id, username) => classRpc("class_remove_student", { p_class: id, p_username: username }),
     resetPin: (id, username) => classRpc("class_reset_pin", { p_class: id, p_username: username }),
   };
+
+  /* ---- privacy: delete my own account (needs the PIN/password) \u00b7 clear this device ---- */
+  async function deleteMe(secret) {
+    if (!user) throw Err("Please sign in again.");
+    if (SERVER && !user.device) await rpc("delete_my_account", { p_token: user.token, p_secret: secret || "" });
+    else {
+      const all = devProfiles(), p = all[user.username];
+      if (!p || p.hash !== await hash(user.username + (secret || ""))) throw Err(user.role === "student" ? "The current PIN is wrong." : "The current password is wrong.");
+      delete all[user.username]; put("edu_device_profiles", all);
+    }
+    dirty = {}; clearMine(); user = null; drop("edu_user");
+  }
+  async function clearDevice() {                  // signs out and removes every game's progress kept on this device
+    if (user) await logout();
+    clearMine(); ["edu_last", "edu_guest", "edu_device_events"].forEach(drop);
+  }
+
+  /* ---- display preferences for the home, admin and teacher pages (the games keep their own stage) ---- */
+  const PREF_KEY = { lang: "edu_lang", sound: "edu_sound", theme: "edu_theme", text: "edu_text" };
+  const ZOOM = { normal: 1, large: 1.15, xlarge: 1.3 };
+  const prefs = () => ({ lang: lang(), sound: get("edu_sound", true) !== false, theme: get("edu_theme", "dark") === "light" ? "light" : "dark", text: ZOOM[get("edu_text", "normal")] ? get("edu_text", "normal") : "normal" });
+  function applyPrefs() {
+    const p = prefs(), h = document.documentElement;
+    h.dataset.theme = p.theme; h.style.zoom = ZOOM[p.text] === 1 ? "" : String(ZOOM[p.text]);
+  }
+  function setPref(k, v) { if (PREF_KEY[k]) put(PREF_KEY[k], v); applyPrefs(); }
 
   /* ---- progress sync: every write to a "mine" key is saved for the signed-in player ---- */
   Storage.prototype.setItem = function (k, v) {
@@ -375,7 +471,7 @@ const EDU = (() => {
   /* ---- admin dashboard data ---- */
   async function adminStats() {
     if (SERVER) return rpc("admin_stats", { p_token: user && user.token });
-    if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only.");
+    if (!user || user.role !== "teacher" && user.role !== "admin") throw Err("Admins only.");
     // device mode: the same shape, built from this device's accounts and events
     const profs = Object.values(devProfiles()), ev = get("edu_device_events", []), day = 864e5, now = Date.now();
     const by = (arr, f) => arr.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
@@ -393,7 +489,7 @@ const EDU = (() => {
   }
 
   /* ---- admin: Accounts page (every account with its activity; one account in detail) ---- */
-  function devAdmin() { if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only."); }
+  function devAdmin() { if (!user || user.role !== "teacher" && user.role !== "admin") throw Err("Admins only."); }
   const iso = t => new Date(t).toISOString();
   async function adminUsers() {
     if (SERVER) return rpc("admin_users", { p_token: user && user.token });
@@ -410,7 +506,7 @@ const EDU = (() => {
     username = (username || "").trim().toLowerCase();
     if (SERVER) return rpc("admin_user_detail", { p_token: user && user.token, p_username: username });
     devAdmin();
-    const p = devProfiles()[username]; if (!p) throw new Error(`No account called ${username}.`);
+    const p = devProfiles()[username]; if (!p) throw Err(`No account called ${username}.`);
     const mine = get("edu_device_events", []).filter(e => e.who === username), ans = mine.filter(e => e.event === "answer"), now = Date.now();
     const group = (xs, f) => xs.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
     return {
@@ -427,7 +523,7 @@ const EDU = (() => {
     get user() { return user; }, get server() { return SERVER; },
     role: () => (user ? user.role : null),
     signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, updateProfile,
-    newRecoveryCode, resetWithRecovery, requestReset, resetWithCode, get recovery() { return recovery; }, classes, adminStats, adminUsers, adminUser,
+    newRecoveryCode, resetWithRecovery, requestReset, resetWithCode, deleteMe, clearDevice, say, prefs, setPref, applyPrefs, get recovery() { return recovery; }, classes, adminStats, adminUsers, adminUser,
     // admin: delete an account (privacy request); returns how many were deleted
     adminDelete: async username => {
       username = (username || "").trim().toLowerCase();
@@ -439,12 +535,32 @@ const EDU = (() => {
   };
 })();
 
-// Shared by the admin pages (dashboard + accounts): small formatters, a bar chart and a table helper.
+// Shared by the admin pages and the teacher page: language, small formatters, a bar chart, a table helper, one account in detail.
 const $ = id => document.getElementById(id);
+/* ---- language: the app's choice (edu_lang); the header switch flips it and reloads ---- */
+const AR_UI = (() => { try { return JSON.parse(localStorage.getItem("edu_lang")) === "ar"; } catch { return false; } })();
+const tr = (en, ar) => (AR_UI ? ar : en);
+const LOC = AR_UI ? "ar-EG-u-nu-latn" : "en-GB";
+document.documentElement.lang = AR_UI ? "ar" : "en"; document.documentElement.dir = AR_UI ? "rtl" : "ltr";
+EDU.applyPrefs();
+// static markup carries its Arabic in data-ar (inner HTML), data-ar-ph (placeholder) and <body data-ar-title>
+function localize() {
+  if (!AR_UI) return;
+  document.querySelectorAll("[data-ar]").forEach(el => (el.innerHTML = el.dataset.ar));
+  document.querySelectorAll("[data-ar-ph]").forEach(el => (el.placeholder = el.dataset.arPh));
+  const tt = document.querySelector("[data-ar-title]"); if (tt) document.title = tt.dataset.arTitle;
+}
+function langSwitch() {
+  const b = document.createElement("button"); b.className = "b"; b.textContent = AR_UI ? "English" : "\u0639\u0631\u0628\u064a"; b.lang = AR_UI ? "en" : "ar";
+  b.addEventListener("click", () => { try { localStorage.setItem("edu_lang", JSON.stringify(AR_UI ? "en" : "ar")); } catch {} location.reload(); });
+  document.querySelector(".bar").insertBefore(b, document.querySelector(".bar .b"));
+}
+localize(); langSwitch();
 const fmt = n => Number(n || 0).toLocaleString("en-US");
 const pct = (c, a) => (a ? Math.round((c / a) * 100) : 0);
 const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-const GAME_NAMES = { millionaire: "Math Millionaire", race: "Team Race", minute: "Minute Challenge", map: "Adventure Map" };
+const GAME_NAMES = AR_UI ? { millionaire: "\u0645\u0644\u064a\u0648\u0646\u064a\u0631 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0627\u062a", race: "\u0633\u0628\u0627\u0642 \u0627\u0644\u0641\u0631\u0642", minute: "\u062a\u062d\u062f\u0651\u064a \u0627\u0644\u062f\u0642\u064a\u0642\u0629", map: "\u062e\u0631\u064a\u0637\u0629 \u0627\u0644\u0645\u063a\u0627\u0645\u0631\u0629" }
+  : { millionaire: "Math Millionaire", race: "Team Race", minute: "Minute Challenge", map: "Adventure Map" };
 
 function accCell(c, a) {
   const p = pct(c, a);
@@ -469,24 +585,25 @@ function bars(el, rows, key, label) {
   });
 }
 function table(el, head, rows) {
-  el.innerHTML = rows.length ? `<table><thead><tr>${head.map(([h, n]) => `<th class="${n ? "n" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td class="${head[i][1] ? "n" : ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : `<div class="empty">No data yet.</div>`;
+  el.innerHTML = rows.length ? `<table><thead><tr>${head.map(([h, n]) => `<th class="${n ? "n" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td class="${head[i][1] ? "n" : ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : `<div class="empty">${tr("No data yet.", "\u0644\u0627 \u062a\u0648\u062c\u062f \u0628\u064a\u0627\u0646\u0627\u062a \u0628\u0639\u062f.")}</div>`;
 }
 
 /* ---- accounts: one account in detail (admin Accounts page, teacher class page) ---- */
-const ROLE = { student: "Student", teacher: "Teacher", admin: "Admin" };
-const GRADE = g => (g ? (g === "KG" ? "KG" : `Grade ${esc(g)}`) : "\u2013");
+const ROLE = AR_UI ? { student: "\u0637\u0627\u0644\u0628", teacher: "\u0645\u0639\u0644\u0645", admin: "\u0645\u062f\u064a\u0631" } : { student: "Student", teacher: "Teacher", admin: "Admin" };
+const GRADE = g => (g ? (g === "KG" ? tr("KG", "\u0627\u0644\u0631\u0648\u0636\u0629") : tr(`Grade ${esc(g)}`, `\u0627\u0644\u0635\u0641 ${esc(g)}`)) : "\u2013");
 const ms = t => (t ? new Date(t).getTime() : 0);
 const ago = t => {
   if (!t) return "\u2013";
   const d = new Date(t), s = (Date.now() - d) / 1000;
-  const rel = s < 60 ? "just now" : s < 3600 ? `${Math.floor(s / 60)} min ago` : s < 86400 ? `${Math.floor(s / 3600)} h ago` : s < 86400 * 30 ? `${Math.floor(s / 86400)} d ago` : d.toLocaleDateString("en-GB");
-  return `<span title="${d.toLocaleString("en-GB")}">${rel}</span>`;
+  const m = Math.floor(s / 60), h = Math.floor(s / 3600), dd = Math.floor(s / 86400);
+  const rel = s < 60 ? tr("just now", "\u0627\u0644\u0622\u0646") : s < 3600 ? tr(`${m} min ago`, `\u0645\u0646\u0630 ${m} \u062f`) : s < 86400 ? tr(`${h} h ago`, `\u0645\u0646\u0630 ${h} \u0633`) : s < 86400 * 30 ? tr(`${dd} d ago`, `\u0645\u0646\u0630 ${dd} \u064a\u0648\u0645`) : d.toLocaleDateString(LOC);
+  return `<span title="${d.toLocaleString(LOC)}">${rel}</span>`;
 };
-const date = t => (t ? new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "\u2013");
+const date = t => (t ? new Date(t).toLocaleDateString(LOC, { day: "numeric", month: "short", year: "numeric" }) : "\u2013");
 const lastActive = u => Math.max(ms(u.last_seen), ms(u.last_play));
 // teachers sign in with their email, so their username IS the email: show it as a mail link
 const ident = u => (u.role === "student" ? esc(u.username) : `<a class="mail" href="mailto:${esc(u.username)}">${esc(u.username)}</a>`);
-const tag = u => `<span class="tag ${u.role}">${ROLE[u.role] || esc(u.role)}</span>${u.locked ? `<span class="tag lock">Locked 10 min</span>` : ""}`;
+const tag = u => `<span class="tag ${u.role}">${ROLE[u.role] || esc(u.role)}</span>${u.locked ? `<span class="tag lock">${tr("Locked 10 min", "\u0645\u0642\u0641\u0644 10 \u062f\u0642\u0627\u0626\u0642")}</span>` : ""}`;
 const parse = v => { if (typeof v === "string") { try { return JSON.parse(v); } catch { return v; } } return v; };
 function progressRows(pr) {
   const out = [];
@@ -494,8 +611,8 @@ function progressRows(pr) {
     const v = parse(raw); let m;
     if ((m = k.match(/^map_progress_(\w+)$/)) && v && typeof v === "object") {
       const stars = Object.values(v).reduce((s, x) => s + (+x || 0), 0), stops = Object.keys(v).length;
-      if (stops) out.push(["Adventure Map", GRADE(m[1]), `${fmt(stars)} \u2605 on ${fmt(stops)} stop${stops > 1 ? "s" : ""}`]);
-    } else if ((m = k.match(/^minute_best_(\w+)_(\d+)$/)) && +v) out.push(["Minute Challenge", `${GRADE(m[1])} \u00b7 ${m[2]} s`, `Best: ${fmt(v)} correct`]);
+      if (stops) out.push([GAME_NAMES.map, GRADE(m[1]), tr(`${fmt(stars)} \u2605 on ${fmt(stops)} stop${stops > 1 ? "s" : ""}`, `${fmt(stars)} \u2605 \u0641\u064a ${fmt(stops)} \u0645\u062d\u0637\u0629`)]);
+    } else if ((m = k.match(/^minute_best_(\w+)_(\d+)$/)) && +v) out.push([GAME_NAMES.minute, `${GRADE(m[1])} \u00b7 ${m[2]} ${tr("s", "\u062b")}`, tr(`Best: ${fmt(v)} correct`, `\u0627\u0644\u0623\u0641\u0636\u0644: ${fmt(v)} \u0635\u062d\u064a\u062d\u0629`)]);
   }
   return out;
 }
@@ -503,22 +620,22 @@ function progressRows(pr) {
 function drawDetail(d) {
   const p = d.profile;
   $("oName").innerHTML = `${esc(p.name)} ${tag(p)}`;
-  const facts = [[p.role === "student" ? "Username" : "Email", ident(p)], ["Type", ROLE[p.role] || esc(p.role)]];
-  if (p.role === "student") facts.push(["Grade", GRADE(p.grade)], ["Parent consent", p.consent ? `<span class="yes">\u2713 Given at sign-up</span>` : `<span class="no">\u2717 Missing</span>`],
-    ["Parent email", p.parent_email ? `<a class="mail" href="mailto:${esc(p.parent_email)}">${esc(p.parent_email)}</a>` : `<span class="note">Not added</span>`],
-    ["Recovery card", p.has_recovery ? `<span class="yes">\u2713 Has one</span>` : `<span class="no">\u2717 None yet</span> <span class="note">(can make one in Edit profile)</span>`]);
-  facts.push(["Joined", new Date(p.created_at).toLocaleString("en-GB")], ["Last signed in / opened the app", ago(p.last_seen)]);
+  const facts = [[p.role === "student" ? tr("Username", "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645") : tr("Email", "\u0627\u0644\u0628\u0631\u064a\u062f"), ident(p)], [tr("Type", "\u0627\u0644\u0646\u0648\u0639"), ROLE[p.role] || esc(p.role)]];
+  if (p.role === "student") facts.push([tr("Grade", "\u0627\u0644\u0635\u0641"), GRADE(p.grade)], [tr("Parent consent", "\u0645\u0648\u0627\u0641\u0642\u0629 \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631"), p.consent ? `<span class="yes">\u2713 ${tr("Given at sign-up", "\u0639\u0646\u062f \u0627\u0644\u062a\u0633\u062c\u064a\u0644")}</span>` : `<span class="no">\u2717 ${tr("Missing", "\u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f\u0629")}</span>`],
+    [tr("Parent email", "\u0628\u0631\u064a\u062f \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631"), p.parent_email ? `<a class="mail" href="mailto:${esc(p.parent_email)}">${esc(p.parent_email)}</a>` : `<span class="note">${tr("Not added", "\u063a\u064a\u0631 \u0645\u0636\u0627\u0641")}</span>`],
+    [tr("Recovery card", "\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639"), p.has_recovery ? `<span class="yes">\u2713 ${tr("Has one", "\u0645\u0648\u062c\u0648\u062f\u0629")}</span>` : `<span class="no">\u2717 ${tr("None yet", "\u0644\u0627 \u062a\u0648\u062c\u062f \u0628\u0639\u062f")}</span> <span class="note">${tr("(can make one in Edit profile)", "(\u062a\u064f\u0646\u0634\u0623 \u0645\u0646 \u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0645\u0644\u0641)")}</span>`]);
+  facts.push([tr("Joined", "\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u062a\u0633\u062c\u064a\u0644"), new Date(p.created_at).toLocaleString(LOC)], [tr("Last signed in / opened the app", "\u0622\u062e\u0631 \u062f\u062e\u0648\u0644 / \u0641\u062a\u062d \u0644\u0644\u062a\u0637\u0628\u064a\u0642"), ago(p.last_seen)]);
   $("oFacts").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("");
   const ans = d.games.reduce((s, g) => s + (+g.answers || 0), 0), ok = d.games.reduce((s, g) => s + (+g.correct || 0), 0);
-  $("oKpis").innerHTML = [["Answers", fmt(ans)], ["Accuracy", ans ? pct(ok, ans) + "%" : "\u2013"], ["Games started", fmt(d.games.reduce((s, g) => s + (+g.plays || 0), 0))], ["Active days \u00b7 30", fmt(d.days.filter(x => +x.answers).length)]]
+  $("oKpis").innerHTML = [[tr("Answers", "\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a"), fmt(ans)], [tr("Accuracy", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0635\u0648\u0627\u0628"), ans ? pct(ok, ans) + "%" : "\u2013"], [tr("Games started", "\u0623\u0644\u0639\u0627\u0628 \u0628\u062f\u0623\u0647\u0627"), fmt(d.games.reduce((s, g) => s + (+g.plays || 0), 0))], [tr("Active days \u00b7 30", "\u0623\u064a\u0627\u0645 \u0646\u0634\u0627\u0637 \u00b7 30"), fmt(d.days.filter(x => +x.answers).length)]]
     .map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${v}</b></div>`).join("");
-  bars($("oDays"), d.days, "answers", "answers");
-  table($("oGames"), [["Game"], ["Plays", 1], ["Answers", 1], ["Accuracy", 1], ["Last played"]], d.games.filter(g => g.game).map(g => [esc(GAME_NAMES[g.game] || g.game), fmt(g.plays), fmt(g.answers), accCell(g.correct, g.answers), ago(g.last_at)]));
-  table($("oProg"), [["Game"], ["Where"], ["Result"]], progressRows(d.progress));
-  table($("oSkills"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]],
-    [...d.skills].sort((x, y) => x.correct / x.answers - y.correct / y.answers || y.answers - x.answers).map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
-  table($("oRecent"), [["When"], ["Game"], ["Grade"], ["Lesson"], ["Skill"], ["Result"]], d.recent.map(e => [ago(e.at), esc(GAME_NAMES[e.game] || e.game || "\u2013"), esc(e.grade || "\u2013"), esc(e.lesson || "\u2013"), esc(e.skill || "\u2013"),
-    e.event === "start" ? `<span class="note">Started a game</span>` : e.correct ? `<span class="yes">\u2713 Right</span>` : `<span class="no">\u2717 Wrong</span>`]));
+  bars($("oDays"), d.days, "answers", tr("answers", "\u0625\u062c\u0627\u0628\u0629"));
+  table($("oGames"), [[tr("Game", "\u0627\u0644\u0644\u0639\u0628\u0629")], [tr("Plays", "\u0645\u0631\u0627\u062a \u0627\u0644\u0644\u0639\u0628"), 1], [tr("Answers", "\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a"), 1], [tr("Accuracy", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0635\u0648\u0627\u0628"), 1], [tr("Last played", "\u0622\u062e\u0631 \u0644\u0639\u0628")]], d.games.filter(g => g.game).map(g => [esc(GAME_NAMES[g.game] || g.game), fmt(g.plays), fmt(g.answers), accCell(g.correct, g.answers), ago(g.last_at)]));
+  table($("oProg"), [[tr("Game", "\u0627\u0644\u0644\u0639\u0628\u0629")], [tr("Where", "\u0623\u064a\u0646")], [tr("Result", "\u0627\u0644\u0646\u062a\u064a\u062c\u0629")]], progressRows(d.progress));
+  table($("oSkills"), [[tr("Grade", "\u0627\u0644\u0635\u0641")], [tr("Lesson", "\u0627\u0644\u062f\u0631\u0633")], [tr("Skill", "\u0627\u0644\u0645\u0647\u0627\u0631\u0629")], [tr("Answers", "\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a"), 1], [tr("Accuracy", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0635\u0648\u0627\u0628"), 1]],
+    [...d.skills].sort((x, y) => x.correct / x.answers - y.correct / y.answers || y.answers - x.answers).map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || tr("Whole lesson", "\u0627\u0644\u062f\u0631\u0633 \u0643\u0644\u0647")), fmt(s.answers), accCell(s.correct, s.answers)]));
+  table($("oRecent"), [[tr("When", "\u0645\u062a\u0649")], [tr("Game", "\u0627\u0644\u0644\u0639\u0628\u0629")], [tr("Grade", "\u0627\u0644\u0635\u0641")], [tr("Lesson", "\u0627\u0644\u062f\u0631\u0633")], [tr("Skill", "\u0627\u0644\u0645\u0647\u0627\u0631\u0629")], [tr("Result", "\u0627\u0644\u0646\u062a\u064a\u062c\u0629")]], d.recent.map(e => [ago(e.at), esc(GAME_NAMES[e.game] || e.game || "\u2013"), esc(e.grade || "\u2013"), esc(e.lesson || "\u2013"), esc(e.skill || "\u2013"),
+    e.event === "start" ? `<span class="note">${tr("Started a game", "\u0628\u062f\u0623 \u0644\u0639\u0628\u0629")}</span>` : e.correct ? `<span class="yes">\u2713 ${tr("Right", "\u0635\u062d\u064a\u062d\u0629")}</span>` : `<span class="no">\u2717 ${tr("Wrong", "\u062e\u0627\u0637\u0626\u0629")}</span>`]));
   return p;
 }
 
@@ -527,23 +644,23 @@ async function load() {
   const d = await EDU.adminStats();
   $("login").hidden = true; $("dash").hidden = false; $("refresh").hidden = false;
   $("who").textContent = `${EDU.user.name} (${EDU.user.username})`;
-  $("mode").textContent = d.device ? "Device mode: these numbers come from this device only. They become app-wide once the server (Supabase) is connected." : `Live data \u00b7 updated ${new Date().toLocaleString("en-GB")}`;
+  $("mode").textContent = d.device ? tr("Device mode: these numbers come from this device only. They become app-wide once the server (Supabase) is connected.", "\u0648\u0636\u0639 \u0627\u0644\u062c\u0647\u0627\u0632: \u0647\u0630\u0647 \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0645\u0646 \u0647\u0630\u0627 \u0627\u0644\u062c\u0647\u0627\u0632 \u0641\u0642\u0637.") : tr(`Live data \u00b7 updated ${new Date().toLocaleString(LOC)}`, `\u0628\u064a\u0627\u0646\u0627\u062a \u0645\u0628\u0627\u0634\u0631\u0629 \u00b7 \u0622\u062e\u0631 \u062a\u062d\u062f\u064a\u062b ${new Date().toLocaleString(LOC)}`);
   const t = d.totals, a = d.answers;
-  $("kpis").innerHTML = [["Students", t.students], ["Teachers", t.teachers], ["Active \u00b7 7 days", t.active7], ["New \u00b7 7 days", t.new7], ["Answers", a.total], ["Accuracy", pct(a.correct, a.total) + "%"]]
+  $("kpis").innerHTML = [[tr("Students", "\u0627\u0644\u0637\u0644\u0627\u0628"), t.students], [tr("Teachers", "\u0627\u0644\u0645\u0639\u0644\u0645\u0648\u0646"), t.teachers], [tr("Active \u00b7 7 days", "\u0646\u0634\u0637\u0648\u0646 \u00b7 7 \u0623\u064a\u0627\u0645"), t.active7], [tr("New \u00b7 7 days", "\u062c\u062f\u062f \u00b7 7 \u0623\u064a\u0627\u0645"), t.new7], [tr("Answers", "\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a"), a.total], [tr("Accuracy", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0635\u0648\u0627\u0628"), pct(a.correct, a.total) + "%"]]
     .map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${typeof v === "number" ? fmt(v) : v}</b></div>`).join("");
-  bars($("cAnswers"), d.days, "answers", "answers");
-  bars($("cSign"), d.days.map(x => ({ ...x, accounts: (+x.students || 0) + (+x.teachers || 0) })), "accounts", "new accounts");
-  table($("tGames"), [["Game"], ["Plays", 1], ["Answers", 1], ["Accuracy", 1]], (d.games || []).filter(g => g.game).map(g => [esc(GAME_NAMES[g.game] || g.game), fmt(g.plays), fmt(g.answers), accCell(g.correct, g.answers)]));
-  table($("tGrades"), [["Grade"], ["Students", 1]], (d.grades || []).map(g => [g.grade === "KG" ? "KG" : `Grade ${esc(g.grade)}`, fmt(g.students)]));
+  bars($("cAnswers"), d.days, "answers", tr("answers", "\u0625\u062c\u0627\u0628\u0629"));
+  bars($("cSign"), d.days.map(x => ({ ...x, accounts: (+x.students || 0) + (+x.teachers || 0) })), "accounts", tr("new accounts", "\u062d\u0633\u0627\u0628 \u062c\u062f\u064a\u062f"));
+  table($("tGames"), [[tr("Game", "\u0627\u0644\u0644\u0639\u0628\u0629")], [tr("Plays", "\u0645\u0631\u0627\u062a \u0627\u0644\u0644\u0639\u0628"), 1], [tr("Answers", "\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a"), 1], [tr("Accuracy", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0635\u0648\u0627\u0628"), 1]], (d.games || []).filter(g => g.game).map(g => [esc(GAME_NAMES[g.game] || g.game), fmt(g.plays), fmt(g.answers), accCell(g.correct, g.answers)]));
+  table($("tGrades"), [[tr("Grade", "\u0627\u0644\u0635\u0641")], [tr("Students", "\u0627\u0644\u0637\u0644\u0627\u0628"), 1]], (d.grades || []).map(g => [GRADE(g.grade), fmt(g.students)]));
   const skills = d.skills || [];
-  table($("tWeak"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.filter(s => s.answers >= 10).sort((x, y) => x.correct / x.answers - y.correct / y.answers).slice(0, 8)
-    .map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
-  table($("tSkills"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.slice(0, 25).map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
+  table($("tWeak"), [[tr("Grade", "\u0627\u0644\u0635\u0641")], [tr("Lesson", "\u0627\u0644\u062f\u0631\u0633")], [tr("Skill", "\u0627\u0644\u0645\u0647\u0627\u0631\u0629")], [tr("Answers", "\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a"), 1], [tr("Accuracy", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0635\u0648\u0627\u0628"), 1]], skills.filter(s => s.answers >= 10).sort((x, y) => x.correct / x.answers - y.correct / y.answers).slice(0, 8)
+    .map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || tr("Whole lesson", "\u0627\u0644\u062f\u0631\u0633 \u0643\u0644\u0647")), fmt(s.answers), accCell(s.correct, s.answers)]));
+  table($("tSkills"), [[tr("Grade", "\u0627\u0644\u0635\u0641")], [tr("Lesson", "\u0627\u0644\u062f\u0631\u0633")], [tr("Skill", "\u0627\u0644\u0645\u0647\u0627\u0631\u0629")], [tr("Answers", "\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a"), 1], [tr("Accuracy", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0635\u0648\u0627\u0628"), 1]], skills.slice(0, 25).map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || tr("Whole lesson", "\u0627\u0644\u062f\u0631\u0633 \u0643\u0644\u0647")), fmt(s.answers), accCell(s.correct, s.answers)]));
 }
 async function boot() {
   try { await EDU.refresh(); if (EDU.user) { await load(); return; } } catch (e) { $("err").textContent = e.message; }
   $("login").hidden = false; $("dash").hidden = true;
-  if (!EDU.server) $("loginNote").textContent = "Device mode: sign in with a teacher account made on this device.";
+  if (!EDU.server) $("loginNote").textContent = tr("Device mode: sign in with a teacher account made on this device.", "\u0648\u0636\u0639 \u0627\u0644\u062c\u0647\u0627\u0632: \u0627\u062f\u062e\u0644 \u0628\u062d\u0633\u0627\u0628 \u0645\u0639\u0644\u0645 \u0623\u064f\u0646\u0634\u0626 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062c\u0647\u0627\u0632.");
 }
 $("go").addEventListener("click", async () => {
   $("err").textContent = "";
@@ -554,13 +671,13 @@ $("p").addEventListener("keydown", e => { if (e.key === "Enter") $("go").click()
 let armed = "";
 $("delBtn").addEventListener("click", async () => {
   const name = $("delUser").value.trim().toLowerCase(), msg = $("delMsg"); msg.className = "err";
-  if (!name) { msg.textContent = "Write the username first."; return; }
-  if (armed !== name) { armed = name; msg.textContent = `Click Delete again to remove ${name} for good.`; $("delBtn").textContent = "Yes, delete"; return; }
-  armed = ""; $("delBtn").textContent = "Delete";
-  try { const n = await EDU.adminDelete(name); msg.className = n ? "err ok" : "err"; msg.textContent = n ? `${name} was deleted.` : `No account called ${name}.`; if (n) load(); }
+  if (!name) { msg.textContent = tr("Write the username first.", "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648\u0644\u064b\u0627."); return; }
+  if (armed !== name) { armed = name; msg.textContent = tr(`Click Delete again to remove ${name} for good.`, `\u0627\u0636\u063a\u0637 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649 \u0644\u062d\u0630\u0641 ${name} \u0646\u0647\u0627\u0626\u064a\u064b\u0627.`); $("delBtn").textContent = tr("Yes, delete", "\u0646\u0639\u0645\u060c \u0627\u062d\u0630\u0641"); return; }
+  armed = ""; $("delBtn").textContent = tr("Delete", "\u062d\u0630\u0641");
+  try { const n = await EDU.adminDelete(name); msg.className = n ? "err ok" : "err"; msg.textContent = n ? tr(`${name} was deleted.`, `\u062a\u0645 \u062d\u0630\u0641 ${name}.`) : tr(`No account called ${name}.`, `\u0644\u0627 \u064a\u0648\u062c\u062f \u062d\u0633\u0627\u0628 \u0628\u0627\u0633\u0645 ${name}.`); if (n) load(); }
   catch (e) { msg.textContent = e.message; }
 });
-$("delUser").addEventListener("input", () => { armed = ""; $("delBtn").textContent = "Delete"; $("delMsg").textContent = ""; });
+$("delUser").addEventListener("input", () => { armed = ""; $("delBtn").textContent = tr("Delete", "\u062d\u0630\u0641"); $("delMsg").textContent = ""; });
 $("refresh").addEventListener("click", () => load().catch(e => ($("err").textContent = e.message)));
 boot();
 </script>

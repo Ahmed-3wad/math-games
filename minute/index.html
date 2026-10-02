@@ -226,6 +226,57 @@ const EDU = (() => {
   const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
   const put = (k, v) => { try { rawSet.call(localStorage, k, JSON.stringify(v)); } catch {} };
   const drop = k => { try { rawRemove.call(localStorage, k); } catch {} };
+
+  /* ---- messages: the server and the checks speak English; Arabic is chosen by edu_lang (# = a number or a name) ---- */
+  const AR = {
+    "Wrong username or PIN/password.": "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0627\u0644\u0631\u0645\u0632/\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d.",
+    "Too many wrong tries. Try again in # minutes.": "\u0645\u062d\u0627\u0648\u0644\u0627\u062a \u062e\u0627\u0637\u0626\u0629 \u0643\u062b\u064a\u0631\u0629. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649 \u0628\u0639\u062f # \u062f\u0642\u064a\u0642\u0629.",
+    "Please sign in again.": "\u0633\u062c\u0651\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.",
+    "Admins only.": "\u0644\u0644\u0645\u062f\u064a\u0631 \u0641\u0642\u0637.",
+    "Teachers only.": "\u0644\u0644\u0645\u0639\u0644\u0645\u064a\u0646 \u0641\u0642\u0637.",
+    "A parent must agree before creating an account.": "\u064a\u062c\u0628 \u0623\u0646 \u064a\u0648\u0627\u0641\u0642 \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 \u0642\u0628\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062d\u0633\u0627\u0628.",
+    "The PIN must be 4 digits.": "\u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0627\u0644\u0631\u0645\u0632 4 \u0623\u0631\u0642\u0627\u0645.",
+    "Write a first name of 2 to 20 letters.": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u064b\u0627 \u0623\u0648\u0644 \u0645\u0646 2 \u0625\u0644\u0649 20 \u062d\u0631\u0641\u064b\u0627.",
+    "Choose a grade.": "\u0627\u062e\u062a\u0631 \u0627\u0644\u0635\u0641.",
+    "Please accept the terms.": "\u064a\u064f\u0631\u062c\u0649 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u0627\u0644\u0634\u0631\u0648\u0637.",
+    "Write your name.": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u0643.",
+    "Write a valid email address.": "\u0627\u0643\u062a\u0628 \u0628\u0631\u064a\u062f\u064b\u0627 \u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a\u064b\u0627 \u0635\u062d\u064a\u062d\u064b\u0627.",
+    "The password must be at least 8 characters.": "\u064a\u062c\u0628 \u0623\u0646 \u062a\u0643\u0648\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 8 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644.",
+    "This email already has an account. Sign in instead.": "\u0644\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f \u062d\u0633\u0627\u0628 \u0628\u0627\u0644\u0641\u0639\u0644. \u0633\u062c\u0651\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0628\u062f\u0644\u064b\u0627 \u0645\u0646 \u0630\u0644\u0643.",
+    "Could not reach the server. Check the internet.": "\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u062e\u0627\u062f\u0645. \u062a\u062d\u0642\u0651\u0642 \u0645\u0646 \u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a.",
+    "The current PIN is wrong.": "\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062d\u0627\u0644\u064a \u063a\u064a\u0631 \u0635\u062d\u064a\u062d.",
+    "The current password is wrong.": "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062d\u0627\u0644\u064a\u0629 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d\u0629.",
+    "Write a valid parent email, or leave it empty.": "\u0627\u0643\u062a\u0628 \u0628\u0631\u064a\u062f \u0648\u0644\u064a\u0651 \u0623\u0645\u0631 \u0635\u062d\u064a\u062d\u064b\u0627 \u0623\u0648 \u0627\u062a\u0631\u0643\u0647 \u0641\u0627\u0631\u063a\u064b\u0627.",
+    "Wrong username or recovery code.": "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d.",
+    "Wrong or expired code.": "\u0627\u0644\u0631\u0645\u0632 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d \u0623\u0648 \u0627\u0646\u062a\u0647\u062a \u0635\u0644\u0627\u062d\u064a\u062a\u0647.",
+    "Email codes are not ready yet. Students can use their recovery code.": "\u0631\u0645\u0648\u0632 \u0627\u0644\u0628\u0631\u064a\u062f \u063a\u064a\u0631 \u062c\u0627\u0647\u0632\u0629 \u0628\u0639\u062f. \u064a\u0645\u0643\u0646 \u0644\u0644\u0637\u0644\u0627\u0628 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639.",
+    "Email codes need the server. Students can use their recovery code.": "\u0631\u0645\u0648\u0632 \u0627\u0644\u0628\u0631\u064a\u062f \u062a\u062d\u062a\u0627\u062c \u0627\u0644\u062e\u0627\u062f\u0645. \u064a\u0645\u0643\u0646 \u0644\u0644\u0637\u0644\u0627\u0628 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639.",
+    "Email codes need the server.": "\u0631\u0645\u0648\u0632 \u0627\u0644\u0628\u0631\u064a\u062f \u062a\u062d\u062a\u0627\u062c \u0627\u0644\u062e\u0627\u062f\u0645.",
+    "Write your username or email.": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f.",
+    "Recovery codes are for student accounts.": "\u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u0644\u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0637\u0644\u0627\u0628 \u0641\u0642\u0637.",
+    "No class has this code. Check it with your teacher.": "\u0644\u0627 \u064a\u0648\u062c\u062f \u0641\u0635\u0644 \u0628\u0647\u0630\u0627 \u0627\u0644\u0643\u0648\u062f. \u062a\u0623\u0643\u0651\u062f \u0645\u0646\u0647 \u0645\u0639 \u0645\u0639\u0644\u0645\u0643.",
+    "Only student accounts join a class.": "\u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0637\u0644\u0627\u0628 \u0641\u0642\u0637 \u0647\u064a \u0627\u0644\u062a\u064a \u062a\u0646\u0636\u0645 \u0625\u0644\u0649 \u0627\u0644\u0641\u0635\u0648\u0644.",
+    "You are already in 10 classes. Leave one first.": "\u0623\u0646\u062a \u0641\u064a 10 \u0641\u0635\u0648\u0644 \u0628\u0627\u0644\u0641\u0639\u0644. \u063a\u0627\u062f\u0631 \u0623\u062d\u062f\u0647\u0627 \u0623\u0648\u0644\u064b\u0627.",
+    "Write a class name (up to 40 letters).": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0627\u0644\u0641\u0635\u0644 (\u062d\u062a\u0649 40 \u062d\u0631\u0641\u064b\u0627).",
+    "You can have up to 30 classes.": "\u064a\u0645\u0643\u0646\u0643 \u0625\u0646\u0634\u0627\u0621 30 \u0641\u0635\u0644\u064b\u0627 \u0639\u0644\u0649 \u0627\u0644\u0623\u0643\u062b\u0631.",
+    "This class was not found.": "\u0644\u0645 \u064a\u064f\u0639\u062b\u0631 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0641\u0635\u0644.",
+    "This student is not in the class.": "\u0647\u0630\u0627 \u0627\u0644\u0637\u0627\u0644\u0628 \u0644\u064a\u0633 \u0641\u064a \u0627\u0644\u0641\u0635\u0644.",
+    "Classes need the server. They work in the online app.": "\u0627\u0644\u0641\u0635\u0648\u0644 \u062a\u062d\u062a\u0627\u062c \u0627\u0644\u062e\u0627\u062f\u0645\u060c \u0648\u062a\u0639\u0645\u0644 \u0641\u064a \u0627\u0644\u062a\u0637\u0628\u064a\u0642 \u0639\u0644\u0649 \u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a.",
+    "No account called #.": "\u0644\u0627 \u064a\u0648\u062c\u062f \u062d\u0633\u0627\u0628 \u0628\u0627\u0633\u0645 #.",
+    "You cannot delete your own admin account here.": "\u0644\u0627 \u064a\u0645\u0643\u0646\u0643 \u062d\u0630\u0641 \u062d\u0633\u0627\u0628 \u0627\u0644\u0645\u062f\u064a\u0631 \u0645\u0646 \u0647\u0646\u0627.",
+    "The admin account cannot be deleted here.": "\u0644\u0627 \u064a\u0645\u0643\u0646 \u062d\u0630\u0641 \u062d\u0633\u0627\u0628 \u0627\u0644\u0645\u062f\u064a\u0631 \u0645\u0646 \u0647\u0646\u0627.",
+  };
+  const lang = () => (get("edu_lang", "en") === "ar" ? "ar" : "en");
+  function say(m) {
+    if (lang() !== "ar" || !m) return m;
+    m = String(m);
+    for (const k in AR) {
+      const [pre, post = null] = k.split("#");
+      if (post === null ? m === k : m.length >= pre.length + post.length && m.startsWith(pre) && m.endsWith(post)) return AR[k].replace("#", post === null ? "" : m.slice(pre.length, m.length - post.length));
+    }
+    return m;
+  }
+  const Err = m => new Error(say(m));
   // what belongs to a player and travels with the account
   const MINE = /^(edu_by_|edu_lessons_|edu_skills_|edu_grade$|edu_last$|map_progress_|minute_best_|minute_secs$|race_setup$|mm4_)/;
   const myKeys = () => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MINE.test(k)) out.push(k); } } catch {} return out; };
@@ -241,8 +292,8 @@ const EDU = (() => {
       body: JSON.stringify(args),
     });
     const text = await r.text(), data = text ? JSON.parse(text) : null;
-    if (!r.ok) throw new Error((data && (data.message || data.hint)) || "Could not reach the server. Check the internet.");
-    if (data && data.error) throw new Error(data.error);
+    if (!r.ok) throw Err((data && (data.message || data.hint)) || "Could not reach the server. Check the internet.");
+    if (data && data.error) throw Err(data.error);
     return data;
   }
 
@@ -262,19 +313,19 @@ const EDU = (() => {
 
   /* ---- shared checks (same rules as the server) ---- */
   function checkStudent(name, grade, pin, consent) {
-    if (!consent) throw new Error("A parent must agree before creating an account.");
-    if (!/^\d{4}$/.test(pin || "")) throw new Error("The PIN must be 4 digits.");
+    if (!consent) throw Err("A parent must agree before creating an account.");
+    if (!/^\d{4}$/.test(pin || "")) throw Err("The PIN must be 4 digits.");
     name = (name || "").trim();
-    if (name.length < 2 || name.length > 20) throw new Error("Write a first name of 2 to 20 letters.");
-    if (!["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
+    if (name.length < 2 || name.length > 20) throw Err("Write a first name of 2 to 20 letters.");
+    if (!["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw Err("Choose a grade.");
     return name;
   }
   function checkTeacher(name, email, password, consent) {
-    if (!consent) throw new Error("Please accept the terms.");
+    if (!consent) throw Err("Please accept the terms.");
     name = (name || "").trim(); email = (email || "").trim().toLowerCase();
-    if (name.length < 2 || name.length > 40) throw new Error("Write your name.");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Write a valid email address.");
-    if ((password || "").length < 8) throw new Error("The password must be at least 8 characters.");
+    if (name.length < 2 || name.length > 40) throw Err("Write your name.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw Err("Write a valid email address.");
+    if ((password || "").length < 8) throw Err("The password must be at least 8 characters.");
     return [name, email];
   }
 
@@ -298,7 +349,7 @@ const EDU = (() => {
   const cleanCode = c => (c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   function checkParent(e) {
     e = (e || "").trim().toLowerCase();
-    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Write a valid parent email, or leave it empty.");
+    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw Err("Write a valid parent email, or leave it empty.");
     return e;
   }
   async function signupStudent({ name, grade, pin, consent, parentEmail }) {
@@ -313,7 +364,7 @@ const EDU = (() => {
     [name, email] = checkTeacher(name, email, password, consent);
     if (SERVER) return start(await rpc("signup_teacher", { p_name: name, p_email: email, p_password: password, p_consent: true }), true);
     const all = devProfiles();
-    if (all[email]) throw new Error("This email already has an account. Sign in instead.");
+    if (all[email]) throw Err("This email already has an account. Sign in instead.");
     all[email] = { role: "teacher", name, grade: null, hash: await hash(email + password), progress: {}, created: Date.now() };
     put("edu_device_profiles", all);
     return start({ token: "device", username: email, name, grade: null, role: "teacher", device: true }, true);
@@ -322,7 +373,7 @@ const EDU = (() => {
     username = (username || "").trim().toLowerCase();
     if (SERVER) return start(await rpc("login", { p_username: username, p_secret: secret }));
     const p = devProfiles()[username];
-    if (!p || p.hash !== await hash(username + secret)) throw new Error("Wrong username or PIN/password.");
+    if (!p || p.hash !== await hash(username + secret)) throw Err("Wrong username or PIN/password.");
     return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, device: true });
   }
   async function logout() {
@@ -339,20 +390,20 @@ const EDU = (() => {
   function clearMine() { myKeys().forEach(drop); }
   // edit my own profile: name, grade (students), and a new PIN/password (needs the current one)
   async function updateProfile({ name, grade, oldSecret, newSecret, parentEmail }) {
-    if (!user) throw new Error("Please sign in again.");
+    if (!user) throw Err("Please sign in again.");
     const student = user.role === "student";
     name = (name || "").trim();
-    if (name.length < 2 || name.length > (student ? 20 : 40)) throw new Error(student ? "Write a first name of 2 to 20 letters." : "Write your name.");
-    if (student && !["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
-    if (newSecret && student && !/^\d{4}$/.test(newSecret)) throw new Error("The PIN must be 4 digits.");
-    if (newSecret && !student && newSecret.length < 8) throw new Error("The password must be at least 8 characters.");
+    if (name.length < 2 || name.length > (student ? 20 : 40)) throw Err(student ? "Write a first name of 2 to 20 letters." : "Write your name.");
+    if (student && !["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw Err("Choose a grade.");
+    if (newSecret && student && !/^\d{4}$/.test(newSecret)) throw Err("The PIN must be 4 digits.");
+    if (newSecret && !student && newSecret.length < 8) throw Err("The password must be at least 8 characters.");
     if (student && parentEmail !== undefined) parentEmail = checkParent(parentEmail);
     let u;
     if (SERVER && !user.device) u = await rpc("update_profile", { p_token: user.token, p_name: name, p_grade: student ? grade : null, p_old_secret: oldSecret || "", p_new_secret: newSecret || "", p_parent_email: student && parentEmail !== undefined ? parentEmail : null });
     else {
-      const all = devProfiles(), p = all[user.username]; if (!p) throw new Error("Please sign in again.");
+      const all = devProfiles(), p = all[user.username]; if (!p) throw Err("Please sign in again.");
       const pe = student && parentEmail !== undefined ? parentEmail || null : p.parent_email || null;
-      if (newSecret || pe !== (p.parent_email || null)) { if (p.hash !== await hash(user.username + (oldSecret || ""))) throw new Error(student ? "The current PIN is wrong." : "The current password is wrong."); }
+      if (newSecret || pe !== (p.parent_email || null)) { if (p.hash !== await hash(user.username + (oldSecret || ""))) throw Err(student ? "The current PIN is wrong." : "The current password is wrong."); }
       if (newSecret) p.hash = await hash(user.username + newSecret);
       p.name = name; if (student) { p.grade = grade; p.parent_email = pe; } put("edu_device_profiles", all);
       u = { name, grade: student ? grade : user.grade, parent_email: student ? pe : null };
@@ -365,37 +416,37 @@ const EDU = (() => {
 
   /* ---- forgot PIN / password ---- */
   async function newRecoveryCode(pin) {               // signed-in student; the old code stops working
-    if (!user || user.role !== "student") throw new Error("Recovery codes are for student accounts.");
+    if (!user || user.role !== "student") throw Err("Recovery codes are for student accounts.");
     if (SERVER && !user.device) return (recovery = (await rpc("new_recovery_code", { p_token: user.token, p_pin: pin || "" })).recovery);
     const all = devProfiles(), p = all[user.username];
-    if (!p || p.hash !== await hash(user.username + (pin || ""))) throw new Error("The current PIN is wrong.");
+    if (!p || p.hash !== await hash(user.username + (pin || ""))) throw Err("The current PIN is wrong.");
     recovery = newCode(); p.rhash = await hash(user.username + cleanCode(recovery)); put("edu_device_profiles", all);
     return recovery;
   }
   async function resetWithRecovery(username, code, newPin) {   // signs in; EDU.recovery holds the NEW code
     username = (username || "").trim().toLowerCase();
-    if (!/^\d{4}$/.test(newPin || "")) throw new Error("The PIN must be 4 digits.");
+    if (!/^\d{4}$/.test(newPin || "")) throw Err("The PIN must be 4 digits.");
     if (SERVER) return start(keepRecovery(await rpc("reset_with_recovery", { p_username: username, p_code: code, p_new_pin: newPin })));
     const all = devProfiles(), p = all[username];
-    if (!p || p.role !== "student" || !p.rhash || p.rhash !== await hash(username + cleanCode(code))) throw new Error("Wrong username or recovery code.");
+    if (!p || p.role !== "student" || !p.rhash || p.rhash !== await hash(username + cleanCode(code))) throw Err("Wrong username or recovery code.");
     recovery = newCode(); p.rhash = await hash(username + cleanCode(recovery)); p.hash = await hash(username + newPin); put("edu_device_profiles", all);
     return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, parent_email: p.parent_email || null, device: true });
   }
   async function requestReset(who) {                  // teacher email, student username or parent email \u2192 a code by email
-    if (!SERVER) throw new Error("Email codes need the server. Students can use their recovery code.");
+    if (!SERVER) throw Err("Email codes need the server. Students can use their recovery code.");
     return rpc("request_reset", { p_who: (who || "").trim() });
   }
   async function resetWithCode(username, code, newSecret) {
-    if (!SERVER) throw new Error("Email codes need the server.");
+    if (!SERVER) throw Err("Email codes need the server.");
     return start(await rpc("reset_with_code", { p_username: (username || "").trim().toLowerCase(), p_code: (code || "").trim(), p_new_secret: newSecret || "" }));
   }
 
   /* ---- classes (server only): teachers make classes with a join code, students join ---- */
   function classRpc(fn, args) {
-    if (!SERVER || !user || user.device) return Promise.reject(new Error("Classes need the server. They work in the online app."));
+    if (!SERVER || !user || user.device) return Promise.reject(Err("Classes need the server. They work in the online app."));
     return rpc(fn, { p_token: user.token, ...args });
   }
-  const classInfo = code => (SERVER ? rpc("class_info", { p_code: code || "" }) : Promise.reject(new Error("Classes need the server. They work in the online app.")));
+  const classInfo = code => (SERVER ? rpc("class_info", { p_code: code || "" }) : Promise.reject(Err("Classes need the server. They work in the online app.")));
   const classes = {
     info: classInfo,
     mine: () => classRpc("my_classes", {}),
@@ -409,6 +460,32 @@ const EDU = (() => {
     removeStudent: (id, username) => classRpc("class_remove_student", { p_class: id, p_username: username }),
     resetPin: (id, username) => classRpc("class_reset_pin", { p_class: id, p_username: username }),
   };
+
+  /* ---- privacy: delete my own account (needs the PIN/password) \u00b7 clear this device ---- */
+  async function deleteMe(secret) {
+    if (!user) throw Err("Please sign in again.");
+    if (SERVER && !user.device) await rpc("delete_my_account", { p_token: user.token, p_secret: secret || "" });
+    else {
+      const all = devProfiles(), p = all[user.username];
+      if (!p || p.hash !== await hash(user.username + (secret || ""))) throw Err(user.role === "student" ? "The current PIN is wrong." : "The current password is wrong.");
+      delete all[user.username]; put("edu_device_profiles", all);
+    }
+    dirty = {}; clearMine(); user = null; drop("edu_user");
+  }
+  async function clearDevice() {                  // signs out and removes every game's progress kept on this device
+    if (user) await logout();
+    clearMine(); ["edu_last", "edu_guest", "edu_device_events"].forEach(drop);
+  }
+
+  /* ---- display preferences for the home, admin and teacher pages (the games keep their own stage) ---- */
+  const PREF_KEY = { lang: "edu_lang", sound: "edu_sound", theme: "edu_theme", text: "edu_text" };
+  const ZOOM = { normal: 1, large: 1.15, xlarge: 1.3 };
+  const prefs = () => ({ lang: lang(), sound: get("edu_sound", true) !== false, theme: get("edu_theme", "dark") === "light" ? "light" : "dark", text: ZOOM[get("edu_text", "normal")] ? get("edu_text", "normal") : "normal" });
+  function applyPrefs() {
+    const p = prefs(), h = document.documentElement;
+    h.dataset.theme = p.theme; h.style.zoom = ZOOM[p.text] === 1 ? "" : String(ZOOM[p.text]);
+  }
+  function setPref(k, v) { if (PREF_KEY[k]) put(PREF_KEY[k], v); applyPrefs(); }
 
   /* ---- progress sync: every write to a "mine" key is saved for the signed-in player ---- */
   Storage.prototype.setItem = function (k, v) {
@@ -456,7 +533,7 @@ const EDU = (() => {
   /* ---- admin dashboard data ---- */
   async function adminStats() {
     if (SERVER) return rpc("admin_stats", { p_token: user && user.token });
-    if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only.");
+    if (!user || user.role !== "teacher" && user.role !== "admin") throw Err("Admins only.");
     // device mode: the same shape, built from this device's accounts and events
     const profs = Object.values(devProfiles()), ev = get("edu_device_events", []), day = 864e5, now = Date.now();
     const by = (arr, f) => arr.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
@@ -474,7 +551,7 @@ const EDU = (() => {
   }
 
   /* ---- admin: Accounts page (every account with its activity; one account in detail) ---- */
-  function devAdmin() { if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only."); }
+  function devAdmin() { if (!user || user.role !== "teacher" && user.role !== "admin") throw Err("Admins only."); }
   const iso = t => new Date(t).toISOString();
   async function adminUsers() {
     if (SERVER) return rpc("admin_users", { p_token: user && user.token });
@@ -491,7 +568,7 @@ const EDU = (() => {
     username = (username || "").trim().toLowerCase();
     if (SERVER) return rpc("admin_user_detail", { p_token: user && user.token, p_username: username });
     devAdmin();
-    const p = devProfiles()[username]; if (!p) throw new Error(`No account called ${username}.`);
+    const p = devProfiles()[username]; if (!p) throw Err(`No account called ${username}.`);
     const mine = get("edu_device_events", []).filter(e => e.who === username), ans = mine.filter(e => e.event === "answer"), now = Date.now();
     const group = (xs, f) => xs.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
     return {
@@ -508,7 +585,7 @@ const EDU = (() => {
     get user() { return user; }, get server() { return SERVER; },
     role: () => (user ? user.role : null),
     signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, updateProfile,
-    newRecoveryCode, resetWithRecovery, requestReset, resetWithCode, get recovery() { return recovery; }, classes, adminStats, adminUsers, adminUser,
+    newRecoveryCode, resetWithRecovery, requestReset, resetWithCode, deleteMe, clearDevice, say, prefs, setPref, applyPrefs, get recovery() { return recovery; }, classes, adminStats, adminUsers, adminUser,
     // admin: delete an account (privacy request); returns how many were deleted
     adminDelete: async username => {
       username = (username || "").trim().toLowerCase();
@@ -786,7 +863,8 @@ G["2-4"] = (t, force) => {
   const half = P10(p) / 2, ans = R(X - half, X + half - 1);
   const rw = v => [v, `${fmt(v)} rounds to ${fmt(roundTo(v, p))}, not ${fmt(X)}.`];
   return makeQ("2-4", `Which number rounds to ${fmt(X)} when rounded to the nearest <b>${PLACE1[p]}</b>?`, ans,
-    [rw(R(X - 3 * half, X - half - 1)), rw(R(X + half, X + 3 * half - 1)), rw(X - half - R(1, Math.min(half - 1, 99) || 1)), rw(X + half + R(0, 99))],
+    // two spares that are always wrong: if random picks collide, makeQ must not fall back to ans \u00b1 1 (that can round to X too)
+    [rw(R(X - 3 * half, X - half - 1)), rw(R(X + half, X + 3 * half - 1)), rw(X - half - R(1, Math.min(half - 1, 99) || 1)), rw(X + half + R(0, 99)), rw(X + P10(p) + R(0, half - 1)), rw(X - P10(p) - R(0, half))],
     `${fmt(ans)} is between ${fmt(X - half)} and ${fmt(X + half - 1)}, so it rounds to ${fmt(X)}.`,
     [`Numbers that round to ${fmt(X)} are from ${fmt(X - half)} up to ${fmt(X + half - 1)}.`, `Round each choice to the nearest ${PLACE1[p]}.`, `Find the one that becomes ${fmt(X)}.`]);
 };
