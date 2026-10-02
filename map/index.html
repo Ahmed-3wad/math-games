@@ -274,13 +274,24 @@ const EDU = (() => {
     if (isNew) { if (u.grade) dirty.edu_grade = JSON.stringify(u.grade); await flush(); } else await pull();
     return u;
   }
-  async function signupStudent({ name, grade, pin, consent }) {
-    name = checkStudent(name, grade, pin, consent);
-    if (SERVER) return start(await rpc("signup_student", { p_name: name, p_grade: grade, p_pin: pin, p_consent: true }), true);
-    const all = devProfiles(), username = newUsername(name, all);
-    all[username] = { role: "student", name, grade, hash: await hash(username + pin), progress: {}, created: Date.now() };
-    put("edu_device_profiles", all);
-    return start({ token: "device", username, name, grade, role: "student", device: true }, true);
+  // the recovery code is shown once (EDU.recovery) and never kept on the device
+  let recovery = null;
+  const keepRecovery = r => { const { recovery: code, ...u } = r; recovery = code || null; return u; };
+  const RC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const newCode = () => { const b = crypto.getRandomValues(new Uint8Array(8)); const c = [...b].map(x => RC[x % 32]).join(""); return c.slice(0, 4) + "-" + c.slice(4); };
+  const cleanCode = c => (c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  function checkParent(e) {
+    e = (e || "").trim().toLowerCase();
+    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Write a valid parent email, or leave it empty.");
+    return e;
+  }
+  async function signupStudent({ name, grade, pin, consent, parentEmail }) {
+    name = checkStudent(name, grade, pin, consent); parentEmail = checkParent(parentEmail);
+    if (SERVER) return start(keepRecovery(await rpc("signup_student", { p_name: name, p_grade: grade, p_pin: pin, p_consent: true, p_parent_email: parentEmail || null })), true);
+    const all = devProfiles(), username = newUsername(name, all), code = newCode();
+    all[username] = { role: "student", name, grade, hash: await hash(username + pin), rhash: await hash(username + cleanCode(code)), parent_email: parentEmail || null, progress: {}, created: Date.now() };
+    put("edu_device_profiles", all); recovery = code;
+    return start({ token: "device", username, name, grade, role: "student", parent_email: parentEmail || null, device: true }, true);
   }
   async function signupTeacher({ name, email, password, consent }) {
     [name, email] = checkTeacher(name, email, password, consent);
@@ -310,6 +321,78 @@ const EDU = (() => {
     return user;
   }
   function clearMine() { myKeys().forEach(drop); }
+  // edit my own profile: name, grade (students), and a new PIN/password (needs the current one)
+  async function updateProfile({ name, grade, oldSecret, newSecret, parentEmail }) {
+    if (!user) throw new Error("Please sign in again.");
+    const student = user.role === "student";
+    name = (name || "").trim();
+    if (name.length < 2 || name.length > (student ? 20 : 40)) throw new Error(student ? "Write a first name of 2 to 20 letters." : "Write your name.");
+    if (student && !["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
+    if (newSecret && student && !/^\d{4}$/.test(newSecret)) throw new Error("The PIN must be 4 digits.");
+    if (newSecret && !student && newSecret.length < 8) throw new Error("The password must be at least 8 characters.");
+    if (student && parentEmail !== undefined) parentEmail = checkParent(parentEmail);
+    let u;
+    if (SERVER && !user.device) u = await rpc("update_profile", { p_token: user.token, p_name: name, p_grade: student ? grade : null, p_old_secret: oldSecret || "", p_new_secret: newSecret || "", p_parent_email: student && parentEmail !== undefined ? parentEmail : null });
+    else {
+      const all = devProfiles(), p = all[user.username]; if (!p) throw new Error("Please sign in again.");
+      const pe = student && parentEmail !== undefined ? parentEmail || null : p.parent_email || null;
+      if (newSecret || pe !== (p.parent_email || null)) { if (p.hash !== await hash(user.username + (oldSecret || ""))) throw new Error(student ? "The current PIN is wrong." : "The current password is wrong."); }
+      if (newSecret) p.hash = await hash(user.username + newSecret);
+      p.name = name; if (student) { p.grade = grade; p.parent_email = pe; } put("edu_device_profiles", all);
+      u = { name, grade: student ? grade : user.grade, parent_email: student ? pe : null };
+    }
+    user = { ...user, name: u.name, grade: u.grade, parent_email: u.parent_email || null }; put("edu_user", user);
+    // through the patched setItem, so the saved progress copy of edu_grade follows on other devices too
+    if (student && u.grade) { try { localStorage.setItem("edu_grade", JSON.stringify(u.grade)); } catch {} await flush(); }
+    return user;
+  }
+
+  /* ---- forgot PIN / password ---- */
+  async function newRecoveryCode(pin) {               // signed-in student; the old code stops working
+    if (!user || user.role !== "student") throw new Error("Recovery codes are for student accounts.");
+    if (SERVER && !user.device) return (recovery = (await rpc("new_recovery_code", { p_token: user.token, p_pin: pin || "" })).recovery);
+    const all = devProfiles(), p = all[user.username];
+    if (!p || p.hash !== await hash(user.username + (pin || ""))) throw new Error("The current PIN is wrong.");
+    recovery = newCode(); p.rhash = await hash(user.username + cleanCode(recovery)); put("edu_device_profiles", all);
+    return recovery;
+  }
+  async function resetWithRecovery(username, code, newPin) {   // signs in; EDU.recovery holds the NEW code
+    username = (username || "").trim().toLowerCase();
+    if (!/^\d{4}$/.test(newPin || "")) throw new Error("The PIN must be 4 digits.");
+    if (SERVER) return start(keepRecovery(await rpc("reset_with_recovery", { p_username: username, p_code: code, p_new_pin: newPin })));
+    const all = devProfiles(), p = all[username];
+    if (!p || p.role !== "student" || !p.rhash || p.rhash !== await hash(username + cleanCode(code))) throw new Error("Wrong username or recovery code.");
+    recovery = newCode(); p.rhash = await hash(username + cleanCode(recovery)); p.hash = await hash(username + newPin); put("edu_device_profiles", all);
+    return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, parent_email: p.parent_email || null, device: true });
+  }
+  async function requestReset(who) {                  // teacher email, student username or parent email \u2192 a code by email
+    if (!SERVER) throw new Error("Email codes need the server. Students can use their recovery code.");
+    return rpc("request_reset", { p_who: (who || "").trim() });
+  }
+  async function resetWithCode(username, code, newSecret) {
+    if (!SERVER) throw new Error("Email codes need the server.");
+    return start(await rpc("reset_with_code", { p_username: (username || "").trim().toLowerCase(), p_code: (code || "").trim(), p_new_secret: newSecret || "" }));
+  }
+
+  /* ---- classes (server only): teachers make classes with a join code, students join ---- */
+  function classRpc(fn, args) {
+    if (!SERVER || !user || user.device) return Promise.reject(new Error("Classes need the server. They work in the online app."));
+    return rpc(fn, { p_token: user.token, ...args });
+  }
+  const classInfo = code => (SERVER ? rpc("class_info", { p_code: code || "" }) : Promise.reject(new Error("Classes need the server. They work in the online app.")));
+  const classes = {
+    info: classInfo,
+    mine: () => classRpc("my_classes", {}),
+    join: code => classRpc("join_class", { p_code: code || "" }),
+    leave: id => classRpc("leave_class", { p_class: id }),
+    create: (name, grade) => classRpc("create_class", { p_name: name, p_grade: grade || null }),
+    update: (id, name, grade, newCode) => classRpc("update_class", { p_class: id, p_name: name, p_grade: grade || null, p_new_code: !!newCode }),
+    remove: id => classRpc("delete_class", { p_class: id }),
+    detail: id => classRpc("class_detail", { p_class: id }),
+    student: (id, username) => classRpc("class_student", { p_class: id, p_username: username }),
+    removeStudent: (id, username) => classRpc("class_remove_student", { p_class: id, p_username: username }),
+    resetPin: (id, username) => classRpc("class_reset_pin", { p_class: id, p_username: username }),
+  };
 
   /* ---- progress sync: every write to a "mine" key is saved for the signed-in player ---- */
   Storage.prototype.setItem = function (k, v) {
@@ -374,10 +457,42 @@ const EDU = (() => {
     };
   }
 
+  /* ---- admin: Accounts page (every account with its activity; one account in detail) ---- */
+  function devAdmin() { if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only."); }
+  const iso = t => new Date(t).toISOString();
+  async function adminUsers() {
+    if (SERVER) return rpc("admin_users", { p_token: user && user.token });
+    devAdmin();
+    const ev = get("edu_device_events", []), week = Date.now() - 7 * 864e5;
+    return Object.entries(devProfiles()).map(([username, p]) => {
+      const mine = ev.filter(e => e.who === username), ans = mine.filter(e => e.event === "answer"), last = Math.max(0, ...mine.map(e => e.at));
+      return { username, name: p.name, role: p.role, grade: p.grade, created_at: iso(p.created || 0), last_seen: iso(last || p.created || 0), locked: false,
+        answers: ans.length, correct: ans.filter(e => e.correct).length, plays: mine.filter(e => e.event === "start").length,
+        answers7: ans.filter(e => e.at > week).length, last_play: last ? iso(last) : null };
+    }).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  }
+  async function adminUser(username) {
+    username = (username || "").trim().toLowerCase();
+    if (SERVER) return rpc("admin_user_detail", { p_token: user && user.token, p_username: username });
+    devAdmin();
+    const p = devProfiles()[username]; if (!p) throw new Error(`No account called ${username}.`);
+    const mine = get("edu_device_events", []).filter(e => e.who === username), ans = mine.filter(e => e.event === "answer"), now = Date.now();
+    const group = (xs, f) => xs.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
+    return {
+      profile: { username, name: p.name, role: p.role, grade: p.grade, created_at: iso(p.created || 0), last_seen: iso(Math.max(p.created || 0, ...mine.map(e => e.at))), consent: true, locked: false, parent_email: p.parent_email || null, has_recovery: !!p.rhash },
+      games: Object.entries(group(mine, e => e.game)).map(([game, xs]) => ({ game, plays: xs.filter(e => e.event === "start").length, answers: xs.filter(e => e.event === "answer").length, correct: xs.filter(e => e.correct).length, last_at: iso(Math.max(...xs.map(e => e.at))) })),
+      skills: Object.entries(group(ans, e => `${e.grade}|${e.lesson}|${e.skill || ""}`)).map(([k, xs]) => { const [grade, lesson, skill] = k.split("|"); return { grade, lesson, skill, answers: xs.length, correct: xs.filter(e => e.correct).length }; }).sort((a, b) => b.answers - a.answers),
+      days: Array.from({ length: 30 }, (_, i) => { const d0 = iso(now - (29 - i) * 864e5).slice(0, 10), xs = ans.filter(e => iso(e.at).slice(0, 10) === d0); return { day: d0, answers: xs.length, correct: xs.filter(e => e.correct).length }; }),
+      recent: mine.slice(-60).reverse().map(e => ({ ...e, at: iso(e.at) })),
+      progress: p.progress || {},
+    };
+  }
+
   return {
     get user() { return user; }, get server() { return SERVER; },
     role: () => (user ? user.role : null),
-    signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, adminStats,
+    signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, updateProfile,
+    newRecoveryCode, resetWithRecovery, requestReset, resetWithCode, get recovery() { return recovery; }, classes, adminStats, adminUsers, adminUser,
     // admin: delete an account (privacy request); returns how many were deleted
     adminDelete: async username => {
       username = (username || "").trim().toLowerCase();

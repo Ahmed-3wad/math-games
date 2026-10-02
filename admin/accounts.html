@@ -12,7 +12,7 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../icon-180.png">
 <link rel="icon" href="../icon-192.png">
-<title>Admin Dashboard</title>
+<title>Accounts &#xb7; Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -95,10 +95,10 @@ a.mail{color:var(--gold);word-break:break-all}
 
 <div class="wrap">
   <header class="bar">
-    <h1><span>Admin</span> dashboard</h1><span class="spacer"></span>
+    <h1><span>Admin</span> accounts</h1><span class="spacer"></span>
     <span class="note" id="who"></span>
     <button class="b" id="refresh" hidden>Refresh</button>
-    <a class="b gold" href="accounts.html">All accounts</a>
+    <a class="b" href="./">Dashboard</a>
     <a class="b" href="../">Back to the app</a>
   </header>
 
@@ -111,22 +111,49 @@ a.mail{color:var(--gold);word-break:break-all}
     <button id="go">Sign in</button>
   </section>
 
-  <main id="dash" hidden style="display:flex;flex-direction:column;gap:18px">
+  <!-- every account -->
+  <main id="list" hidden style="display:flex;flex-direction:column;gap:14px">
     <p class="note" id="mode"></p>
     <div class="kpis" id="kpis"></div>
+    <section class="panel" style="display:flex;flex-direction:column;gap:12px">
+      <div class="tools">
+        <input id="q" type="search" placeholder="Search a name, username, teacher or parent email" autocapitalize="none">
+        <div class="chips" id="roles">
+          <button data-r="all" aria-pressed="true">All</button><button data-r="student" aria-pressed="false">Students</button><button data-r="teacher" aria-pressed="false">Teachers</button>
+        </div>
+        <select id="grade" aria-label="Grade"><option value="">All grades</option></select>
+        <select id="sort" aria-label="Sort">
+          <option value="new">Newest first</option><option value="active">Last active</option><option value="answers">Most answers</option><option value="name">Name A&#x2013;Z</option>
+        </select>
+      </div>
+      <p class="note" id="count"></p>
+      <div class="tw" id="tUsers"></div>
+      <p class="note">Click an account to see its activity. PINs and passwords are never shown: they are stored scrambled (hashed) and nobody can read them, not even the admin.</p>
+    </section>
+  </main>
+
+  <!-- one account -->
+  <main id="one" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div><button class="b" id="back">&#x2190; All accounts</button></div>
+<!-- one account in detail: shared by the admin Accounts page and the teacher's class page (filled by drawDetail) -->
+    <section class="panel who">
+      <h2 id="oName"></h2>
+      <div class="facts" id="oFacts" style="margin-top:12px"></div>
+    </section>
+    <div class="kpis" id="oKpis"></div>
     <div class="grid2">
-      <section class="panel"><h2>Answers per day &#xb7; last 30 days</h2><div class="chart" id="cAnswers"></div></section>
-      <section class="panel"><h2>New accounts per day &#xb7; last 30 days</h2><div class="chart" id="cSign"></div></section>
+      <section class="panel"><h2>Answers per day &#xb7; last 30 days</h2><div class="chart" id="oDays"></div></section>
+      <section class="panel"><h2>Games</h2><div class="tw" id="oGames"></div></section>
     </div>
     <div class="grid2">
-      <section class="panel"><h2>Games</h2><div class="tw" id="tGames"></div></section>
-      <section class="panel"><h2>Students by grade</h2><div class="tw" id="tGrades"></div></section>
+      <section class="panel"><h2>Lessons and skills <span class="note">(weakest first)</span></h2><div class="tw" id="oSkills"></div></section>
+      <section class="panel"><h2>Saved progress</h2><div class="tw" id="oProg"></div></section>
     </div>
-    <section class="panel"><h2>Weakest skills <span class="note">(at least 10 answers, lowest accuracy first)</span></h2><div class="tw" id="tWeak"></div></section>
-    <section class="panel"><h2>Most played lessons and skills</h2><div class="tw" id="tSkills"></div></section>
-    <section class="panel"><h2>Delete an account</h2>
-      <p class="note">For a parent or teacher who asks to delete an account. Their stars, scores and sign-in are removed; past answers stay only as anonymous totals.</p>
-      <div class="del"><input id="delUser" placeholder="username, e.g. omar482, or teacher email" autocapitalize="none"><button class="b" id="delBtn">Delete</button></div>
+    <section class="panel"><h2>Latest activity <span class="note">(last 60)</span></h2><div class="tw" id="oRecent"></div></section>
+
+    <section class="panel" id="oDel"><h2>Delete this account</h2>
+      <p class="note">Only when the parent or teacher asks. Stars, scores and sign-in are removed for good; past answers stay only as anonymous totals.</p>
+      <div class="del"><button class="b" id="delBtn">Delete</button></div>
       <div class="err" id="delMsg"></div>
     </section>
   </main>
@@ -523,45 +550,82 @@ function drawDetail(d) {
 }
 
 
-async function load() {
-  const d = await EDU.adminStats();
-  $("login").hidden = true; $("dash").hidden = false; $("refresh").hidden = false;
-  $("who").textContent = `${EDU.user.name} (${EDU.user.username})`;
-  $("mode").textContent = d.device ? "Device mode: these numbers come from this device only. They become app-wide once the server (Supabase) is connected." : `Live data \u00b7 updated ${new Date().toLocaleString("en-GB")}`;
-  const t = d.totals, a = d.answers;
-  $("kpis").innerHTML = [["Students", t.students], ["Teachers", t.teachers], ["Active \u00b7 7 days", t.active7], ["New \u00b7 7 days", t.new7], ["Answers", a.total], ["Accuracy", pct(a.correct, a.total) + "%"]]
-    .map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${typeof v === "number" ? fmt(v) : v}</b></div>`).join("");
-  bars($("cAnswers"), d.days, "answers", "answers");
-  bars($("cSign"), d.days.map(x => ({ ...x, accounts: (+x.students || 0) + (+x.teachers || 0) })), "accounts", "new accounts");
-  table($("tGames"), [["Game"], ["Plays", 1], ["Answers", 1], ["Accuracy", 1]], (d.games || []).filter(g => g.game).map(g => [esc(GAME_NAMES[g.game] || g.game), fmt(g.plays), fmt(g.answers), accCell(g.correct, g.answers)]));
-  table($("tGrades"), [["Grade"], ["Students", 1]], (d.grades || []).map(g => [g.grade === "KG" ? "KG" : `Grade ${esc(g.grade)}`, fmt(g.students)]));
-  const skills = d.skills || [];
-  table($("tWeak"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.filter(s => s.answers >= 10).sort((x, y) => x.correct / x.answers - y.correct / y.answers).slice(0, 8)
-    .map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
-  table($("tSkills"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.slice(0, 25).map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
+/* ---------- list ---------- */
+let ALL = [], role = "all";
+async function loadList() {
+  ALL = await EDU.adminUsers();
+  $("mode").textContent = EDU.server ? `Live data \u00b7 updated ${new Date().toLocaleString("en-GB")}` : "Device mode: only accounts made on this device.";
+  const st = ALL.filter(u => u.role === "student").length, week = Date.now() - 7 * 864e5;
+  $("kpis").innerHTML = [["All accounts", ALL.length], ["Students", st], ["Teachers", ALL.length - st], ["Active \u00b7 7 days", ALL.filter(u => lastActive(u) > week).length]]
+    .map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${fmt(v)}</b></div>`).join("");
+  const grades = [...new Set(ALL.map(u => u.grade).filter(Boolean))].sort((a, b) => (a === "KG" ? -1 : b === "KG" ? 1 : a - b)), sel = $("grade"), keep = sel.value;
+  sel.innerHTML = `<option value="">All grades</option>` + grades.map(g => `<option value="${esc(g)}">${GRADE(g)}</option>`).join("");
+  sel.value = grades.includes(keep) ? keep : "";
+  drawList();
 }
-async function boot() {
-  try { await EDU.refresh(); if (EDU.user) { await load(); return; } } catch (e) { $("err").textContent = e.message; }
-  $("login").hidden = false; $("dash").hidden = true;
+function drawList() {
+  const q = $("q").value.trim().toLowerCase(), g = $("grade").value, sort = $("sort").value;
+  const rows = ALL.filter(u => (role === "all" || (role === "teacher" ? u.role !== "student" : u.role === role)) && (!g || u.grade === g) &&
+    (!q || `${u.name} ${u.username} ${u.parent_email || ""}`.toLowerCase().includes(q)));
+  const by = { new: (a, b) => ms(b.created_at) - ms(a.created_at), active: (a, b) => lastActive(b) - lastActive(a), answers: (a, b) => b.answers - a.answers, name: (a, b) => a.name.localeCompare(b.name) }[sort];
+  rows.sort(by);
+  $("count").textContent = `${rows.length} of ${ALL.length} accounts`;
+  $("tUsers").innerHTML = rows.length ? `<table><thead><tr><th>Name</th><th>Username / email</th><th>Type</th><th>Grade</th><th>Joined</th><th>Last active</th><th class="n">Answers</th><th class="n">This week</th><th class="n">Accuracy</th></tr></thead><tbody>` +
+    rows.map(u => `<tr class="row" data-u="${esc(u.username)}" tabindex="0"><td><b>${esc(u.name)}</b></td><td>${ident(u)}</td><td>${tag(u)}</td><td>${u.role === "student" ? GRADE(u.grade) : "\u2013"}</td><td>${date(u.created_at)}</td><td>${ago(lastActive(u))}</td><td class="n">${fmt(u.answers)}</td><td class="n">${fmt(u.answers7)}</td><td class="n">${accCell(u.correct, u.answers)}</td></tr>`).join("") + `</tbody></table>`
+    : `<div class="empty">No account matches.</div>`;
+}
+$("tUsers").addEventListener("click", e => { if (e.target.closest("a")) return; const r = e.target.closest("tr.row"); if (r) location.hash = "u=" + encodeURIComponent(r.dataset.u); });
+$("tUsers").addEventListener("keydown", e => { const r = e.target.closest("tr.row"); if (r && e.key === "Enter") location.hash = "u=" + encodeURIComponent(r.dataset.u); });
+$("q").addEventListener("input", drawList);
+$("grade").addEventListener("change", drawList);
+$("sort").addEventListener("change", drawList);
+$("roles").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; role = b.dataset.r; $("roles").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); drawList(); });
+
+/* ---------- one account ---------- */
+let current = null;
+async function loadOne(name) {
+  current = drawDetail(await EDU.adminUser(name));
+  $("oDel").hidden = current.role === "admin"; resetDelete();
+}
+let armed = false;
+function resetDelete() { armed = false; $("delBtn").textContent = "Delete"; $("delMsg").textContent = ""; $("delMsg").className = "err"; }
+$("delBtn").addEventListener("click", async () => {
+  if (!current) return;
+  if (!armed) { armed = true; $("delBtn").textContent = `Yes, delete ${current.username}`; $("delMsg").textContent = "Click again to delete this account for good."; return; }
+  try { const n = await EDU.adminDelete(current.username); if (!n) { $("delMsg").textContent = "Nothing was deleted."; return; } location.hash = ""; }
+  catch (e) { $("delMsg").textContent = e.message; }
+});
+$("back").addEventListener("click", () => (location.hash = ""));
+
+/* ---------- pages: #u=<username> opens one account, no hash = the list ---------- */
+async function route() {
+  const m = location.hash.match(/^#u=(.+)$/);
+  $("login").hidden = true; $("refresh").hidden = false;
+  $("who").textContent = `${EDU.user.name} (${EDU.user.username})`;
+  try {
+    if (m) { await loadOne(decodeURIComponent(m[1])); $("list").hidden = true; $("one").hidden = false; scrollTo(0, 0); }
+    else { await loadList(); $("one").hidden = true; $("list").hidden = false; }
+  } catch (e) {
+    if (/admins only/i.test(e.message)) { showLogin("This account is not an admin."); return; }
+    $("list").hidden = false; $("one").hidden = true; $("tUsers").innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+function showLogin(msg) {
+  $("login").hidden = false; $("list").hidden = true; $("one").hidden = true; $("refresh").hidden = true;
+  $("err").textContent = msg || "";
   if (!EDU.server) $("loginNote").textContent = "Device mode: sign in with a teacher account made on this device.";
 }
+async function boot() {
+  try { await EDU.refresh(); if (EDU.user) { await route(); return; } } catch (e) { $("err").textContent = e.message; }
+  showLogin($("err").textContent);
+}
+addEventListener("hashchange", () => EDU.user && route());
 $("go").addEventListener("click", async () => {
   $("err").textContent = "";
-  try { await EDU.login($("u").value, $("p").value); await load(); } catch (e) { $("err").textContent = e.message; }
+  try { await EDU.login($("u").value, $("p").value); await route(); } catch (e) { $("err").textContent = e.message; }
 });
 $("p").addEventListener("keydown", e => { if (e.key === "Enter") $("go").click(); });
-// two clicks to delete: the first asks, the second deletes
-let armed = "";
-$("delBtn").addEventListener("click", async () => {
-  const name = $("delUser").value.trim().toLowerCase(), msg = $("delMsg"); msg.className = "err";
-  if (!name) { msg.textContent = "Write the username first."; return; }
-  if (armed !== name) { armed = name; msg.textContent = `Click Delete again to remove ${name} for good.`; $("delBtn").textContent = "Yes, delete"; return; }
-  armed = ""; $("delBtn").textContent = "Delete";
-  try { const n = await EDU.adminDelete(name); msg.className = n ? "err ok" : "err"; msg.textContent = n ? `${name} was deleted.` : `No account called ${name}.`; if (n) load(); }
-  catch (e) { msg.textContent = e.message; }
-});
-$("delUser").addEventListener("input", () => { armed = ""; $("delBtn").textContent = "Delete"; $("delMsg").textContent = ""; });
-$("refresh").addEventListener("click", () => load().catch(e => ($("err").textContent = e.message)));
+$("refresh").addEventListener("click", () => route());
 boot();
 </script>
 

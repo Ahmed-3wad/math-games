@@ -121,6 +121,12 @@ a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
 .err{color:#FF8FA6;font-size:14px;min-height:1.2em}
 .note2{color:var(--muted);font-size:12.5px}
 .ucard{background:var(--deep);border:2px dashed var(--gold);border-radius:16px;padding:16px;text-align:center;margin:12px 0}
+.ucard.rcard{border-style:solid;display:flex;flex-direction:column;gap:6px}
+.ucard.rcard b{font-family:Consolas,"Nunito",monospace;letter-spacing:.12em}
+.clist{list-style:none;margin:6px 0 14px;padding:0;display:flex;flex-direction:column;gap:6px}
+.clist li{display:flex;justify-content:space-between;gap:10px;background:var(--deep);border-radius:10px;padding:8px 12px}
+.joined{color:#7FE3B6;font-weight:700}
+.btn.ghost{background:transparent;color:var(--gold);border:2px solid var(--gold)}
 .ucard b{display:block;font-family:"Nunito",monospace;font-size:34px;color:var(--gold);letter-spacing:.04em;direction:ltr}
 .plist{margin:0;padding-inline-start:1.2em;line-height:1.8}
 .arow{display:flex;flex-direction:column;gap:8px;margin-top:12px}
@@ -128,8 +134,6 @@ a.card:hover{transform:translateY(-3px);border-color:var(--gold)}
 .arow button:hover,.arow a:hover{border-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-</head>
-<body>
 
 <div class="app">
   <div class="rays"></div>
@@ -252,13 +256,24 @@ const EDU = (() => {
     if (isNew) { if (u.grade) dirty.edu_grade = JSON.stringify(u.grade); await flush(); } else await pull();
     return u;
   }
-  async function signupStudent({ name, grade, pin, consent }) {
-    name = checkStudent(name, grade, pin, consent);
-    if (SERVER) return start(await rpc("signup_student", { p_name: name, p_grade: grade, p_pin: pin, p_consent: true }), true);
-    const all = devProfiles(), username = newUsername(name, all);
-    all[username] = { role: "student", name, grade, hash: await hash(username + pin), progress: {}, created: Date.now() };
-    put("edu_device_profiles", all);
-    return start({ token: "device", username, name, grade, role: "student", device: true }, true);
+  // the recovery code is shown once (EDU.recovery) and never kept on the device
+  let recovery = null;
+  const keepRecovery = r => { const { recovery: code, ...u } = r; recovery = code || null; return u; };
+  const RC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const newCode = () => { const b = crypto.getRandomValues(new Uint8Array(8)); const c = [...b].map(x => RC[x % 32]).join(""); return c.slice(0, 4) + "-" + c.slice(4); };
+  const cleanCode = c => (c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  function checkParent(e) {
+    e = (e || "").trim().toLowerCase();
+    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Write a valid parent email, or leave it empty.");
+    return e;
+  }
+  async function signupStudent({ name, grade, pin, consent, parentEmail }) {
+    name = checkStudent(name, grade, pin, consent); parentEmail = checkParent(parentEmail);
+    if (SERVER) return start(keepRecovery(await rpc("signup_student", { p_name: name, p_grade: grade, p_pin: pin, p_consent: true, p_parent_email: parentEmail || null })), true);
+    const all = devProfiles(), username = newUsername(name, all), code = newCode();
+    all[username] = { role: "student", name, grade, hash: await hash(username + pin), rhash: await hash(username + cleanCode(code)), parent_email: parentEmail || null, progress: {}, created: Date.now() };
+    put("edu_device_profiles", all); recovery = code;
+    return start({ token: "device", username, name, grade, role: "student", parent_email: parentEmail || null, device: true }, true);
   }
   async function signupTeacher({ name, email, password, consent }) {
     [name, email] = checkTeacher(name, email, password, consent);
@@ -288,6 +303,78 @@ const EDU = (() => {
     return user;
   }
   function clearMine() { myKeys().forEach(drop); }
+  // edit my own profile: name, grade (students), and a new PIN/password (needs the current one)
+  async function updateProfile({ name, grade, oldSecret, newSecret, parentEmail }) {
+    if (!user) throw new Error("Please sign in again.");
+    const student = user.role === "student";
+    name = (name || "").trim();
+    if (name.length < 2 || name.length > (student ? 20 : 40)) throw new Error(student ? "Write a first name of 2 to 20 letters." : "Write your name.");
+    if (student && !["KG", "1", "2", "3", "4", "5", "6"].includes(grade)) throw new Error("Choose a grade.");
+    if (newSecret && student && !/^\d{4}$/.test(newSecret)) throw new Error("The PIN must be 4 digits.");
+    if (newSecret && !student && newSecret.length < 8) throw new Error("The password must be at least 8 characters.");
+    if (student && parentEmail !== undefined) parentEmail = checkParent(parentEmail);
+    let u;
+    if (SERVER && !user.device) u = await rpc("update_profile", { p_token: user.token, p_name: name, p_grade: student ? grade : null, p_old_secret: oldSecret || "", p_new_secret: newSecret || "", p_parent_email: student && parentEmail !== undefined ? parentEmail : null });
+    else {
+      const all = devProfiles(), p = all[user.username]; if (!p) throw new Error("Please sign in again.");
+      const pe = student && parentEmail !== undefined ? parentEmail || null : p.parent_email || null;
+      if (newSecret || pe !== (p.parent_email || null)) { if (p.hash !== await hash(user.username + (oldSecret || ""))) throw new Error(student ? "The current PIN is wrong." : "The current password is wrong."); }
+      if (newSecret) p.hash = await hash(user.username + newSecret);
+      p.name = name; if (student) { p.grade = grade; p.parent_email = pe; } put("edu_device_profiles", all);
+      u = { name, grade: student ? grade : user.grade, parent_email: student ? pe : null };
+    }
+    user = { ...user, name: u.name, grade: u.grade, parent_email: u.parent_email || null }; put("edu_user", user);
+    // through the patched setItem, so the saved progress copy of edu_grade follows on other devices too
+    if (student && u.grade) { try { localStorage.setItem("edu_grade", JSON.stringify(u.grade)); } catch {} await flush(); }
+    return user;
+  }
+
+  /* ---- forgot PIN / password ---- */
+  async function newRecoveryCode(pin) {               // signed-in student; the old code stops working
+    if (!user || user.role !== "student") throw new Error("Recovery codes are for student accounts.");
+    if (SERVER && !user.device) return (recovery = (await rpc("new_recovery_code", { p_token: user.token, p_pin: pin || "" })).recovery);
+    const all = devProfiles(), p = all[user.username];
+    if (!p || p.hash !== await hash(user.username + (pin || ""))) throw new Error("The current PIN is wrong.");
+    recovery = newCode(); p.rhash = await hash(user.username + cleanCode(recovery)); put("edu_device_profiles", all);
+    return recovery;
+  }
+  async function resetWithRecovery(username, code, newPin) {   // signs in; EDU.recovery holds the NEW code
+    username = (username || "").trim().toLowerCase();
+    if (!/^\d{4}$/.test(newPin || "")) throw new Error("The PIN must be 4 digits.");
+    if (SERVER) return start(keepRecovery(await rpc("reset_with_recovery", { p_username: username, p_code: code, p_new_pin: newPin })));
+    const all = devProfiles(), p = all[username];
+    if (!p || p.role !== "student" || !p.rhash || p.rhash !== await hash(username + cleanCode(code))) throw new Error("Wrong username or recovery code.");
+    recovery = newCode(); p.rhash = await hash(username + cleanCode(recovery)); p.hash = await hash(username + newPin); put("edu_device_profiles", all);
+    return start({ token: "device", username, name: p.name, grade: p.grade, role: p.role, parent_email: p.parent_email || null, device: true });
+  }
+  async function requestReset(who) {                  // teacher email, student username or parent email \u2192 a code by email
+    if (!SERVER) throw new Error("Email codes need the server. Students can use their recovery code.");
+    return rpc("request_reset", { p_who: (who || "").trim() });
+  }
+  async function resetWithCode(username, code, newSecret) {
+    if (!SERVER) throw new Error("Email codes need the server.");
+    return start(await rpc("reset_with_code", { p_username: (username || "").trim().toLowerCase(), p_code: (code || "").trim(), p_new_secret: newSecret || "" }));
+  }
+
+  /* ---- classes (server only): teachers make classes with a join code, students join ---- */
+  function classRpc(fn, args) {
+    if (!SERVER || !user || user.device) return Promise.reject(new Error("Classes need the server. They work in the online app."));
+    return rpc(fn, { p_token: user.token, ...args });
+  }
+  const classInfo = code => (SERVER ? rpc("class_info", { p_code: code || "" }) : Promise.reject(new Error("Classes need the server. They work in the online app.")));
+  const classes = {
+    info: classInfo,
+    mine: () => classRpc("my_classes", {}),
+    join: code => classRpc("join_class", { p_code: code || "" }),
+    leave: id => classRpc("leave_class", { p_class: id }),
+    create: (name, grade) => classRpc("create_class", { p_name: name, p_grade: grade || null }),
+    update: (id, name, grade, newCode) => classRpc("update_class", { p_class: id, p_name: name, p_grade: grade || null, p_new_code: !!newCode }),
+    remove: id => classRpc("delete_class", { p_class: id }),
+    detail: id => classRpc("class_detail", { p_class: id }),
+    student: (id, username) => classRpc("class_student", { p_class: id, p_username: username }),
+    removeStudent: (id, username) => classRpc("class_remove_student", { p_class: id, p_username: username }),
+    resetPin: (id, username) => classRpc("class_reset_pin", { p_class: id, p_username: username }),
+  };
 
   /* ---- progress sync: every write to a "mine" key is saved for the signed-in player ---- */
   Storage.prototype.setItem = function (k, v) {
@@ -352,10 +439,42 @@ const EDU = (() => {
     };
   }
 
+  /* ---- admin: Accounts page (every account with its activity; one account in detail) ---- */
+  function devAdmin() { if (!user || user.role !== "teacher" && user.role !== "admin") throw new Error("Admins only."); }
+  const iso = t => new Date(t).toISOString();
+  async function adminUsers() {
+    if (SERVER) return rpc("admin_users", { p_token: user && user.token });
+    devAdmin();
+    const ev = get("edu_device_events", []), week = Date.now() - 7 * 864e5;
+    return Object.entries(devProfiles()).map(([username, p]) => {
+      const mine = ev.filter(e => e.who === username), ans = mine.filter(e => e.event === "answer"), last = Math.max(0, ...mine.map(e => e.at));
+      return { username, name: p.name, role: p.role, grade: p.grade, created_at: iso(p.created || 0), last_seen: iso(last || p.created || 0), locked: false,
+        answers: ans.length, correct: ans.filter(e => e.correct).length, plays: mine.filter(e => e.event === "start").length,
+        answers7: ans.filter(e => e.at > week).length, last_play: last ? iso(last) : null };
+    }).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  }
+  async function adminUser(username) {
+    username = (username || "").trim().toLowerCase();
+    if (SERVER) return rpc("admin_user_detail", { p_token: user && user.token, p_username: username });
+    devAdmin();
+    const p = devProfiles()[username]; if (!p) throw new Error(`No account called ${username}.`);
+    const mine = get("edu_device_events", []).filter(e => e.who === username), ans = mine.filter(e => e.event === "answer"), now = Date.now();
+    const group = (xs, f) => xs.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
+    return {
+      profile: { username, name: p.name, role: p.role, grade: p.grade, created_at: iso(p.created || 0), last_seen: iso(Math.max(p.created || 0, ...mine.map(e => e.at))), consent: true, locked: false, parent_email: p.parent_email || null, has_recovery: !!p.rhash },
+      games: Object.entries(group(mine, e => e.game)).map(([game, xs]) => ({ game, plays: xs.filter(e => e.event === "start").length, answers: xs.filter(e => e.event === "answer").length, correct: xs.filter(e => e.correct).length, last_at: iso(Math.max(...xs.map(e => e.at))) })),
+      skills: Object.entries(group(ans, e => `${e.grade}|${e.lesson}|${e.skill || ""}`)).map(([k, xs]) => { const [grade, lesson, skill] = k.split("|"); return { grade, lesson, skill, answers: xs.length, correct: xs.filter(e => e.correct).length }; }).sort((a, b) => b.answers - a.answers),
+      days: Array.from({ length: 30 }, (_, i) => { const d0 = iso(now - (29 - i) * 864e5).slice(0, 10), xs = ans.filter(e => iso(e.at).slice(0, 10) === d0); return { day: d0, answers: xs.length, correct: xs.filter(e => e.correct).length }; }),
+      recent: mine.slice(-60).reverse().map(e => ({ ...e, at: iso(e.at) })),
+      progress: p.progress || {},
+    };
+  }
+
   return {
     get user() { return user; }, get server() { return SERVER; },
     role: () => (user ? user.role : null),
-    signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, adminStats,
+    signupStudent, signupTeacher, login, logout, refresh, pull, flush, track, updateProfile,
+    newRecoveryCode, resetWithRecovery, requestReset, resetWithCode, get recovery() { return recovery; }, classes, adminStats, adminUsers, adminUser,
     // admin: delete an account (privacy request); returns how many were deleted
     adminDelete: async username => {
       username = (username || "").trim().toLowerCase();
@@ -379,9 +498,20 @@ const T = {
         consentKid: "My parent agrees that I use this app.", what: "What do we save?", create: "Create my account", back: "Back", tName: "Your name", email: "Email", password: "Password (at least 8 characters)",
         consentT: "I accept the terms and the privacy notice.", createT: "Create teacher account", signinT: "Sign in", userL: "Username or email", secretL: "PIN or password", signin: "Sign in",
         doneT: "Your account is ready!", doneS: "Write down your username and PIN. You need them to sign in on another device.", yourUser: "Your username", go: "Let's play", pinDiff: "The two PINs are different.",
-        privT: "What we save", priv: ["Students: first name or nickname, grade, the PIN (stored scrambled), stars and scores.", "Teachers: name, email and password (stored scrambled).", "Which questions were answered and whether they were right, to make the games better.", "No photos, no location, no ads and no chat.", "A parent or teacher can ask us to delete an account at any time."],
+        privT: "What we save", priv: ["Students: first name or nickname, grade, the PIN and recovery code (stored scrambled), stars and scores, and a parent email only if one is given.", "Teachers: name, email and password (stored scrambled).", "Which questions were answered and whether they were right, to make the games better.", "No photos, no location, no ads and no chat.", "A parent or teacher can ask us to delete an account at any time."],
         deviceNote: "For now, accounts are saved on this device only.", signedAs: "Signed in as", out: "Sign out", sw: "Switch account", admin: "Admin dashboard", roleS: "Student", roleT: "Teacher", roleA: "Admin",
-        hi: n => `Welcome back, ${n}!`, stars: "stars on the map", best: "best in Minute Challenge", last: "Last played", cont: "Continue", noProg: "Play a game and your progress shows here.", wait: "Please wait\u2026" },
+        hi: n => `Welcome back, ${n}!`, stars: "stars on the map", best: "best in Minute Challenge", last: "Last played", cont: "Continue", noProg: "Play a game and your progress shows here.", wait: "Please wait\u2026",
+        edit: "Edit profile", editT: "Edit my profile", emailL: "Email (used to sign in)", userN: "Username (used to sign in)", chPin: "Change my PIN (optional)", chPass: "Change my password (optional)",
+        curPin: "Current PIN", newPin: "New PIN", curPass: "Current password", newPass: "New password (at least 8 characters)", needCur: "Write the current one first.", saveP: "Save", saved: "Saved \u2713",
+        parentL: "Parent's email (optional)", parentHelp: "If the PIN is forgotten, we can send a code to this email.", needCurFor: "To change the PIN or the parent email, write the current PIN.",
+        recT: "Your recovery card", recS: "If you forget your PIN, this code lets you choose a new one. Save the card as a picture or write it down, and keep it secret.", recCode: "Recovery code", saveCard: "Save the card as a picture", cardFor: "Recovery card",
+        newRec: "Make a new recovery card", newRecT: "Your new recovery card", newRecS: "The old code does not work any more.",
+        forgot: "Forgot your PIN or password?", fgT: "Forgot your PIN or password?", fgRec: "I have my recovery code", fgRecSub: "Students: use the code on your recovery card.", fgMail: "Send me a code by email", fgMailSub: "Teachers, or students whose parent email was added.",
+        newPinL: "New PIN (4 digits)", repeatL: "Repeat it", same: "The two are different.", setNew: "Save and sign in", mailWho: "Your username, or the teacher / parent email", sendCode: "Send the code",
+        mailSent: "If an account matches, we sent a code to its email. It works for 15 minutes. Look in the spam folder too.", codeL: "6-digit code from the email", newSecretL: "New PIN (student) or new password (teacher)",
+        classL: "Class code from your teacher (optional)", joinedC: (c, t) => `You joined the class ${c} with ${t}.`, myClasses: "My classes", joinT: "Join a class", joinCode: "Class code",
+        check: "Check the code", joinBtn: "Join this class", joinQ: (c, t) => `Join ${c} with ${t}?`, noClasses: "You are not in a class yet. Ask your teacher for the class code.",
+        leave: "Leave", leaveQ: "Leave?", withT: "with", teacherPage: "My classes" },
   ar: { title: `\u062a\u0639\u0644\u0651\u0645 \u0648\u0623\u0646\u062a <em>\u062a\u0644\u0639\u0628</em>`, sub: "\u0623\u0644\u0639\u0627\u0628 \u062a\u0639\u0644\u064a\u0645\u064a\u0629 \u0645\u0646 \u0627\u0644\u0631\u0648\u0636\u0629 \u062d\u062a\u0649 \u0627\u0644\u0635\u0641 \u0627\u0644\u0633\u0627\u062f\u0633 \u2014 \u0623\u0633\u0626\u0644\u0629 \u062c\u062f\u064a\u062f\u0629 \u0641\u064a \u0643\u0644 \u062c\u0648\u0644\u0629\u060c \u0648\u0634\u0631\u062d \u0644\u0643\u0644 \u062e\u0637\u0623\u060c \u0641\u064a \u0627\u0644\u0641\u0635\u0644 \u0623\u0648 \u0641\u064a \u0627\u0644\u0628\u064a\u062a.",
         grade: "\u0627\u0644\u0635\u0641", all: "\u0627\u0644\u0643\u0644", play: "\u0627\u0644\u0639\u0628 \u0627\u0644\u0622\u0646", soon: "\u0642\u0631\u064a\u0628\u064b\u0627", games: n => n === 1 ? "\u0644\u0639\u0628\u0629 \u0648\u0627\u062d\u062f\u0629" : n === 2 ? "\u0644\u0639\u0628\u062a\u0627\u0646" : `${n} \u0623\u0644\u0639\u0627\u0628`,
         none: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0623\u0644\u0639\u0627\u0628 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0641 \u0628\u0639\u062f\u060c \u0648\u0647\u064a \u0641\u064a \u0627\u0644\u0637\u0631\u064a\u0642.", grades: g => { const n = x => x === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : x; return g.length > 1 ? `\u0645\u0646 ${n(g.at(0))} \u0625\u0644\u0649 ${n(g.at(-1))}` : g[0] === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : `\u0627\u0644\u0635\u0641 ${g[0]}`; },
@@ -392,9 +522,20 @@ const T = {
         consentKid: "\u0648\u0644\u064a\u0651 \u0623\u0645\u0631\u064a \u0645\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0627\u0633\u062a\u062e\u062f\u0627\u0645\u064a \u0627\u0644\u062a\u0637\u0628\u064a\u0642.", what: "\u0645\u0627\u0630\u0627 \u0646\u062d\u0641\u0638\u061f", create: "\u0623\u0646\u0634\u0626 \u062d\u0633\u0627\u0628\u064a", back: "\u0631\u062c\u0648\u0639", tName: "\u0627\u0633\u0645\u0643", email: "\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a", password: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (8 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)",
         consentT: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0627\u0644\u0634\u0631\u0648\u0637 \u0648\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629.", createT: "\u0623\u0646\u0634\u0626 \u062d\u0633\u0627\u0628 \u0645\u0639\u0644\u0645", signinT: "\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644", userL: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f", secretL: "\u0627\u0644\u0631\u0645\u0632 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631", signin: "\u062f\u062e\u0648\u0644",
         doneT: "\u062d\u0633\u0627\u0628\u0643 \u062c\u0627\u0647\u0632!", doneS: "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0648\u0627\u0644\u0631\u0645\u0632 \u0641\u064a \u0645\u0643\u0627\u0646 \u0622\u0645\u0646\u060c \u0633\u062a\u062d\u062a\u0627\u062c\u0647\u0645\u0627 \u0644\u0644\u062f\u062e\u0648\u0644 \u0645\u0646 \u062c\u0647\u0627\u0632 \u0622\u062e\u0631.", yourUser: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645", go: "\u0647\u064a\u0627 \u0646\u0644\u0639\u0628", pinDiff: "\u0627\u0644\u0631\u0645\u0632\u0627\u0646 \u063a\u064a\u0631 \u0645\u062a\u0637\u0627\u0628\u0642\u064a\u0646.",
-        privT: "\u0645\u0627\u0630\u0627 \u0646\u062d\u0641\u0638\u061f", priv: ["\u0627\u0644\u0637\u0627\u0644\u0628: \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644 \u0623\u0648 \u0627\u0633\u0645 \u0645\u0633\u062a\u0639\u0627\u0631\u060c \u0648\u0627\u0644\u0635\u0641\u060c \u0648\u0627\u0644\u0631\u0645\u0632 (\u0645\u062d\u0641\u0648\u0638 \u0645\u0634\u0641\u0651\u0631\u064b\u0627)\u060c \u0648\u0627\u0644\u0646\u062c\u0648\u0645 \u0648\u0627\u0644\u0646\u062a\u0627\u0626\u062c.", "\u0627\u0644\u0645\u0639\u0644\u0645: \u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (\u0645\u062d\u0641\u0648\u0638\u0629 \u0645\u0634\u0641\u0651\u0631\u0629).", "\u0623\u064a \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0623\u064f\u062c\u064a\u0628\u062a \u0648\u0647\u0644 \u0643\u0627\u0646\u062a \u0635\u062d\u064a\u062d\u0629\u060c \u0644\u062a\u062d\u0633\u064a\u0646 \u0627\u0644\u0623\u0644\u0639\u0627\u0628.", "\u0644\u0627 \u0635\u0648\u0631 \u0648\u0644\u0627 \u0645\u0648\u0642\u0639 \u0648\u0644\u0627 \u0625\u0639\u0644\u0627\u0646\u0627\u062a \u0648\u0644\u0627 \u0645\u062d\u0627\u062f\u062b\u0627\u062a.", "\u064a\u0645\u0643\u0646 \u0644\u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 \u0623\u0648 \u0627\u0644\u0645\u0639\u0644\u0645 \u0637\u0644\u0628 \u062d\u0630\u0641 \u0627\u0644\u062d\u0633\u0627\u0628 \u0641\u064a \u0623\u064a \u0648\u0642\u062a."],
+        privT: "\u0645\u0627\u0630\u0627 \u0646\u062d\u0641\u0638\u061f", priv: ["\u0627\u0644\u0637\u0627\u0644\u0628: \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644 \u0623\u0648 \u0627\u0633\u0645 \u0645\u0633\u062a\u0639\u0627\u0631\u060c \u0648\u0627\u0644\u0635\u0641\u060c \u0648\u0627\u0644\u0631\u0645\u0632 \u0648\u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639 (\u0645\u062d\u0641\u0648\u0638\u0627\u0646 \u0645\u0634\u0641\u0651\u0631\u064a\u0646)\u060c \u0648\u0627\u0644\u0646\u062c\u0648\u0645 \u0648\u0627\u0644\u0646\u062a\u0627\u0626\u062c\u060c \u0648\u0628\u0631\u064a\u062f \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 \u0641\u0642\u0637 \u0625\u0630\u0627 \u0623\u064f\u0636\u064a\u0641.", "\u0627\u0644\u0645\u0639\u0644\u0645: \u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (\u0645\u062d\u0641\u0648\u0638\u0629 \u0645\u0634\u0641\u0651\u0631\u0629).", "\u0623\u064a \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0623\u064f\u062c\u064a\u0628\u062a \u0648\u0647\u0644 \u0643\u0627\u0646\u062a \u0635\u062d\u064a\u062d\u0629\u060c \u0644\u062a\u062d\u0633\u064a\u0646 \u0627\u0644\u0623\u0644\u0639\u0627\u0628.", "\u0644\u0627 \u0635\u0648\u0631 \u0648\u0644\u0627 \u0645\u0648\u0642\u0639 \u0648\u0644\u0627 \u0625\u0639\u0644\u0627\u0646\u0627\u062a \u0648\u0644\u0627 \u0645\u062d\u0627\u062f\u062b\u0627\u062a.", "\u064a\u0645\u0643\u0646 \u0644\u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 \u0623\u0648 \u0627\u0644\u0645\u0639\u0644\u0645 \u0637\u0644\u0628 \u062d\u0630\u0641 \u0627\u0644\u062d\u0633\u0627\u0628 \u0641\u064a \u0623\u064a \u0648\u0642\u062a."],
         deviceNote: "\u0627\u0644\u062d\u0633\u0627\u0628\u0627\u062a \u0645\u062d\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062c\u0647\u0627\u0632 \u0641\u0642\u0637 \u062d\u0627\u0644\u064a\u064b\u0627.", signedAs: "\u0645\u0633\u062c\u0651\u0644 \u0628\u0627\u0633\u0645", out: "\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c", sw: "\u062a\u0628\u062f\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628", admin: "\u0644\u0648\u062d\u0629 \u0627\u0644\u0625\u062f\u0627\u0631\u0629", roleS: "\u0637\u0627\u0644\u0628", roleT: "\u0645\u0639\u0644\u0645", roleA: "\u0645\u062f\u064a\u0631",
-        hi: n => `\u0623\u0647\u0644\u064b\u0627 \u0628\u0639\u0648\u062f\u062a\u0643 \u064a\u0627 ${n}!`, stars: "\u0646\u062c\u0645\u0629 \u0641\u064a \u0627\u0644\u062e\u0631\u064a\u0637\u0629", best: "\u0623\u0641\u0636\u0644 \u0646\u062a\u064a\u062c\u0629 \u0641\u064a \u062a\u062d\u062f\u0651\u064a \u0627\u0644\u062f\u0642\u064a\u0642\u0629", last: "\u0622\u062e\u0631 \u0644\u0639\u0628\u0629", cont: "\u0623\u0643\u0645\u0644", noProg: "\u0627\u0644\u0639\u0628 \u0644\u0639\u0628\u0629 \u0648\u0633\u064a\u0638\u0647\u0631 \u062a\u0642\u062f\u0651\u0645\u0643 \u0647\u0646\u0627.", wait: "\u0644\u062d\u0638\u0629\u2026" },
+        hi: n => `\u0623\u0647\u0644\u064b\u0627 \u0628\u0639\u0648\u062f\u062a\u0643 \u064a\u0627 ${n}!`, stars: "\u0646\u062c\u0645\u0629 \u0641\u064a \u0627\u0644\u062e\u0631\u064a\u0637\u0629", best: "\u0623\u0641\u0636\u0644 \u0646\u062a\u064a\u062c\u0629 \u0641\u064a \u062a\u062d\u062f\u0651\u064a \u0627\u0644\u062f\u0642\u064a\u0642\u0629", last: "\u0622\u062e\u0631 \u0644\u0639\u0628\u0629", cont: "\u0623\u0643\u0645\u0644", noProg: "\u0627\u0644\u0639\u0628 \u0644\u0639\u0628\u0629 \u0648\u0633\u064a\u0638\u0647\u0631 \u062a\u0642\u062f\u0651\u0645\u0643 \u0647\u0646\u0627.", wait: "\u0644\u062d\u0638\u0629\u2026",
+        edit: "\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0645\u0644\u0641", editT: "\u062a\u0639\u062f\u064a\u0644 \u0645\u0644\u0641\u064a", emailL: "\u0627\u0644\u0628\u0631\u064a\u062f (\u0644\u0644\u062f\u062e\u0648\u0644)", userN: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 (\u0644\u0644\u062f\u062e\u0648\u0644)", chPin: "\u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u0631\u0645\u0632 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)", chPass: "\u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)",
+        curPin: "\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062d\u0627\u0644\u064a", newPin: "\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062c\u062f\u064a\u062f", curPass: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062d\u0627\u0644\u064a\u0629", newPass: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062c\u062f\u064a\u062f\u0629 (8 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)", needCur: "\u0627\u0643\u062a\u0628 \u0627\u0644\u062d\u0627\u0644\u064a \u0623\u0648\u0644\u064b\u0627.", saveP: "\u062d\u0641\u0638", saved: "\u062a\u0645 \u0627\u0644\u062d\u0641\u0638 \u2713",
+        parentL: "\u0628\u0631\u064a\u062f \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)", parentHelp: "\u0625\u0630\u0627 \u0646\u064f\u0633\u064a \u0627\u0644\u0631\u0645\u0632 \u0646\u0631\u0633\u0644 \u0631\u0645\u0632 \u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f.", needCurFor: "\u0644\u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u0631\u0645\u0632 \u0623\u0648 \u0628\u0631\u064a\u062f \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631 \u0627\u0643\u062a\u0628 \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062d\u0627\u0644\u064a.",
+        recT: "\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639", recS: "\u0625\u0630\u0627 \u0646\u0633\u064a\u062a \u0631\u0645\u0632\u0643\u060c \u0641\u0647\u0630\u0627 \u0627\u0644\u0643\u0648\u062f \u064a\u062a\u064a\u062d \u0644\u0643 \u0627\u062e\u062a\u064a\u0627\u0631 \u0631\u0645\u0632 \u062c\u062f\u064a\u062f. \u0627\u062d\u0641\u0638 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0635\u0648\u0631\u0629\u064b \u0623\u0648 \u0627\u0643\u062a\u0628\u0647\u0627\u060c \u0648\u0644\u0627 \u062a\u064f\u0637\u0644\u0639 \u0639\u0644\u064a\u0647\u0627 \u0623\u062d\u062f\u064b\u0627.", recCode: "\u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639", saveCard: "\u0627\u062d\u0641\u0638 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0635\u0648\u0631\u0629", cardFor: "\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639",
+        newRec: "\u0623\u0646\u0634\u0626 \u0628\u0637\u0627\u0642\u0629 \u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u062c\u062f\u064a\u062f\u0629", newRecT: "\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u0627\u0644\u062c\u062f\u064a\u062f\u0629", newRecS: "\u0627\u0644\u0643\u0648\u062f \u0627\u0644\u0642\u062f\u064a\u0645 \u0644\u0645 \u064a\u0639\u062f \u064a\u0639\u0645\u0644.",
+        forgot: "\u0646\u0633\u064a\u062a \u0627\u0644\u0631\u0645\u0632 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061f", fgT: "\u0646\u0633\u064a\u062a \u0627\u0644\u0631\u0645\u0632 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061f", fgRec: "\u0645\u0639\u064a \u0643\u0648\u062f \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639", fgRecSub: "\u0644\u0644\u0637\u0644\u0627\u0628: \u0627\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0643\u0648\u062f \u0627\u0644\u0645\u0643\u062a\u0648\u0628 \u0641\u064a \u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639.", fgMail: "\u0623\u0631\u0633\u0644\u0648\u0627 \u0644\u064a \u0631\u0645\u0632\u064b\u0627 \u0628\u0627\u0644\u0628\u0631\u064a\u062f", fgMailSub: "\u0644\u0644\u0645\u0639\u0644\u0645\u064a\u0646\u060c \u0623\u0648 \u0644\u0644\u0637\u0644\u0627\u0628 \u0627\u0644\u0630\u064a\u0646 \u0623\u064f\u0636\u064a\u0641 \u0628\u0631\u064a\u062f \u0648\u0644\u064a\u0651 \u0623\u0645\u0631\u0647\u0645.",
+        newPinL: "\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062c\u062f\u064a\u062f (4 \u0623\u0631\u0642\u0627\u0645)", repeatL: "\u0623\u0639\u062f \u0643\u062a\u0627\u0628\u062a\u0647", same: "\u0627\u0644\u0642\u064a\u0645\u062a\u0627\u0646 \u063a\u064a\u0631 \u0645\u062a\u0637\u0627\u0628\u0642\u062a\u064a\u0646.", setNew: "\u0627\u062d\u0641\u0638 \u0648\u0627\u062f\u062e\u0644", mailWho: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u060c \u0623\u0648 \u0628\u0631\u064a\u062f \u0627\u0644\u0645\u0639\u0644\u0645 / \u0648\u0644\u064a\u0651 \u0627\u0644\u0623\u0645\u0631", sendCode: "\u0623\u0631\u0633\u0644 \u0627\u0644\u0631\u0645\u0632",
+        mailSent: "\u0625\u0630\u0627 \u0648\u064f\u062c\u062f \u062d\u0633\u0627\u0628 \u0645\u0637\u0627\u0628\u0642 \u0641\u0642\u062f \u0623\u0631\u0633\u0644\u0646\u0627 \u0631\u0645\u0632\u064b\u0627 \u0625\u0644\u0649 \u0628\u0631\u064a\u062f\u0647\u060c \u0648\u0647\u0648 \u0635\u0627\u0644\u062d 15 \u062f\u0642\u064a\u0642\u0629. \u0627\u0641\u062d\u0635 \u0645\u062c\u0644\u062f \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u063a\u064a\u0631 \u0627\u0644\u0645\u0631\u063a\u0648\u0628 \u0641\u064a\u0647\u0627 \u0623\u064a\u0636\u064b\u0627.", codeL: "\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0645\u0643\u0648\u0651\u0646 \u0645\u0646 6 \u0623\u0631\u0642\u0627\u0645 \u0645\u0646 \u0627\u0644\u0628\u0631\u064a\u062f", newSecretL: "\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062c\u062f\u064a\u062f (\u0644\u0644\u0637\u0627\u0644\u0628) \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062c\u062f\u064a\u062f\u0629 (\u0644\u0644\u0645\u0639\u0644\u0645)",
+        classL: "\u0643\u0648\u062f \u0627\u0644\u0641\u0635\u0644 \u0645\u0646 \u0645\u0639\u0644\u0645\u0643 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)", joinedC: (c, t) => `\u0627\u0646\u0636\u0645\u0645\u062a \u0625\u0644\u0649 \u0641\u0635\u0644 ${c} \u0645\u0639 ${t}.`, myClasses: "\u0641\u0635\u0648\u0644\u064a", joinT: "\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 \u0641\u0635\u0644", joinCode: "\u0643\u0648\u062f \u0627\u0644\u0641\u0635\u0644",
+        check: "\u062a\u062d\u0642\u0651\u0642 \u0645\u0646 \u0627\u0644\u0643\u0648\u062f", joinBtn: "\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0641\u0635\u0644", joinQ: (c, t) => `\u0647\u0644 \u062a\u0646\u0636\u0645 \u0625\u0644\u0649 ${c} \u0645\u0639 ${t}\u061f`, noClasses: "\u0644\u0633\u062a \u0641\u064a \u0623\u064a \u0641\u0635\u0644 \u0628\u0639\u062f. \u0627\u0637\u0644\u0628 \u0643\u0648\u062f \u0627\u0644\u0641\u0635\u0644 \u0645\u0646 \u0645\u0639\u0644\u0645\u0643.",
+        leave: "\u0645\u063a\u0627\u062f\u0631\u0629", leaveQ: "\u0645\u062a\u0623\u0643\u062f\u061f", withT: "\u0645\u0639", teacherPage: "\u0641\u0635\u0648\u0644\u064a" },
 };
 const GRADES = ["KG", "1", "2", "3", "4", "5", "6"];
 // The catalogue: ready games link to their folder; the rest are on the roadmap.
@@ -475,6 +616,8 @@ function welcome(v) {
   if (view === "student") w.innerHTML = `<h3>${t.student}</h3><div class="form"><label>${t.firstName}<input id="fName" maxlength="20" autocomplete="given-name"></label>
     <label>${t.gradeL}${grades(load("edu_grade", "4"))}</label>
     <div class="two"><label>${t.pin}<input id="fPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" type="password" autocomplete="new-password"></label><label>${t.pin2}<input id="fPin2" inputmode="numeric" pattern="[0-9]*" maxlength="4" type="password" autocomplete="new-password"></label></div>
+    <label>${t.classL}<input id="fClass" dir="ltr" autocapitalize="characters" autocomplete="off" maxlength="9"></label>
+    <label>${t.parentL}<input id="fParent" type="email" autocomplete="email" dir="ltr"><span class="note2">${t.parentHelp}</span></label>
     <label class="chk"><input type="checkbox" id="fOk"><span>${t.consentKid} <button class="lnk" id="wWhat" type="button">${t.what}</button></span></label>
     <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.create}</button>${device}<div class="links"><button id="wBack">${t.back}</button></div></div>`;
   if (view === "teacher") w.innerHTML = `<h3>${t.teacher}</h3><div class="form"><label>${t.tName}<input id="fName" maxlength="40" autocomplete="name"></label>
@@ -483,8 +626,23 @@ function welcome(v) {
     <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.createT}</button>${device}<div class="links"><button id="wBack">${t.back}</button></div></div>`;
   if (view === "signin") w.innerHTML = `<h3>${t.signinT}</h3><div class="form"><label>${t.userL}<input id="fUser" autocomplete="username" dir="ltr" autocapitalize="none"></label>
     <label>${t.secretL}<input id="fSecret" type="password" autocomplete="current-password" dir="ltr"></label>
-    <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.signin}</button>${device}<div class="links"><button id="wBack">${t.back}</button></div></div>`;
-  if (view === "done") w.innerHTML = `<h3>${t.doneT}</h3><p>${t.doneS}</p><div class="ucard">${t.yourUser}<b>${escH(EDU.user.username)}</b></div><button class="btn" id="fDone">${t.go}</button>`;
+    <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.signin}</button>${device}<div class="links"><button id="wForgot">${t.forgot}</button><button id="wBack">${t.back}</button></div></div>`;
+  if (view === "forgot") w.innerHTML = `<h3>${t.fgT}</h3><div class="who"><button id="wRec"><b>${t.fgRec}</b><span>${t.fgRecSub}</span></button><button id="wMail"><b>${t.fgMail}</b><span>${t.fgMailSub}</span></button></div>
+    <div class="links"><button id="wBackIn">${t.back}</button></div>`;
+  if (view === "recover") w.innerHTML = `<h3>${t.fgRec}</h3><div class="form"><label>${t.userL}<input id="fUser" autocomplete="username" dir="ltr" autocapitalize="none"></label>
+    <label>${t.recCode}<input id="fCode" dir="ltr" autocapitalize="characters" autocomplete="off" placeholder="XXXX-XXXX" maxlength="12"></label>
+    <div class="two"><label>${t.newPinL}<input id="fNew" inputmode="numeric" pattern="[0-9]*" maxlength="4" type="password" autocomplete="new-password"></label><label>${t.repeatL}<input id="fNew2" inputmode="numeric" pattern="[0-9]*" maxlength="4" type="password" autocomplete="new-password"></label></div>
+    <div class="err" id="fErr"></div><button class="btn" id="fGo">${t.setNew}</button>${device}<div class="links"><button id="wBackFg">${t.back}</button></div></div>`;
+  if (view === "mail") w.innerHTML = `<h3>${t.fgMail}</h3><div class="form"><label>${t.mailWho}<input id="fWho" dir="ltr" autocapitalize="none" autocomplete="username"></label>
+    <div class="err" id="fErr"></div><button class="btn" id="fSend">${t.sendCode}</button>
+    <div id="fStep2" class="form" style="margin-top:0" hidden><p class="note2" style="color:var(--silver)">${t.mailSent}</p>
+      <label>${t.userL}<input id="fUser" dir="ltr" autocapitalize="none" autocomplete="username"></label>
+      <label>${t.codeL}<input id="fCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" dir="ltr"></label>
+      <label>${t.newSecretL}<input id="fNew" type="password" autocomplete="new-password" dir="ltr"></label><label>${t.repeatL}<input id="fNew2" type="password" autocomplete="new-password" dir="ltr"></label>
+      <div class="err" id="fErr2"></div><button class="btn" id="fGo">${t.setNew}</button></div>
+    <div class="links"><button id="wBackFg">${t.back}</button></div></div>`;
+  if (view === "done") w.innerHTML = `<h3>${t.doneT}</h3><p>${t.doneS}</p>${welcome.joined ? `<p class="joined">${t.joinedC(escH(welcome.joined.name), escH(welcome.joined.teacher))}</p>` : ""}${recCard(EDU.recovery)}<button class="btn" id="fDone">${t.go}</button>`;
+  if (view === "newrec") w.innerHTML = `<h3>${t.newRecT}</h3><p>${t.newRecS} ${t.recS}</p>${recCard(EDU.recovery)}<button class="btn" id="fDone">${t.go}</button>`;
   if (view === "privacy") w.innerHTML = `<h3>${t.privT}</h3><ul class="plist">${t.priv.map(p => `<li>${p}</li>`).join("")}</ul><div class="links" style="margin-top:12px"><button id="wBack2">${t.back}</button></div>`;
   const on = (id, fn) => $(id) && $(id).addEventListener("click", fn);
   let from = view;
@@ -492,20 +650,58 @@ function welcome(v) {
   on("wG", () => { save("edu_guest", true); $("ovWelcome").hidden = true; render(); });
   on("wBack", () => welcome("choose")); on("wWhat", () => { welcome.ret = from; welcome("privacy"); }); on("wBack2", () => welcome(welcome.ret || "choose"));
   on("fDone", () => { $("ovWelcome").hidden = true; render(); });
+  on("fSave", saveCard);
+  on("wForgot", () => welcome("forgot")); on("wBackIn", () => welcome("signin")); on("wBackFg", () => welcome("forgot"));
+  on("wRec", () => welcome("recover")); on("wMail", () => welcome("mail"));
+  on("fSend", async () => {
+    const err = $("fErr"), btn = $("fSend"), who = $("fWho").value.trim(); err.textContent = ""; btn.disabled = true; btn.textContent = t.wait;
+    try { await EDU.requestReset(who); $("fStep2").hidden = false; if (!$("fUser").value) $("fUser").value = who.toLowerCase(); $("fCode").focus(); }
+    catch (e) { err.textContent = e.message; }
+    btn.disabled = false; btn.textContent = t.sendCode;
+  });
   on("fGo", async () => {
-    const err = $("fErr"), btn = $("fGo"); err.textContent = ""; btn.disabled = true; btn.textContent = t.wait;
+    const err = $("fErr2") || $("fErr"), btn = $("fGo"); err.textContent = ""; btn.disabled = true; btn.textContent = t.wait;
     try {
+      if (view === "recover" || view === "mail") {
+        if ($("fNew").value !== $("fNew2").value) throw new Error(t.same);
+        if (view === "recover") { await EDU.resetWithRecovery($("fUser").value, $("fCode").value, $("fNew").value); welcome("newrec"); render(); return; }
+        await EDU.resetWithCode($("fUser").value, $("fCode").value, $("fNew").value);
+        $("ovWelcome").hidden = true; grade = "all"; render(); return;
+      }
       if (view === "student") {
         if ($("fPin").value !== $("fPin2").value) throw new Error(t.pinDiff);
-        await EDU.signupStudent({ name: $("fName").value, grade: $("fGrade").value, pin: $("fPin").value, consent: $("fOk").checked });
+        // a class code is checked before the account is made, then joined right after
+        const code = $("fClass").value.trim(); welcome.joined = code ? await EDU.classes.info(code) : null;
+        await EDU.signupStudent({ name: $("fName").value, grade: $("fGrade").value, pin: $("fPin").value, consent: $("fOk").checked, parentEmail: $("fParent").value });
+        if (code) await EDU.classes.join(code).catch(() => (welcome.joined = null));
         welcome("done"); return;
       }
       if (view === "teacher") await EDU.signupTeacher({ name: $("fName").value, email: $("fEmail").value, password: $("fPass").value, consent: $("fOk").checked });
       if (view === "signin") await EDU.login($("fUser").value, $("fSecret").value);
       $("ovWelcome").hidden = true; grade = "all"; render();
-    } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = view === "teacher" ? t.createT : view === "signin" ? t.signin : t.create; }
+    } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = view === "teacher" ? t.createT : view === "signin" ? t.signin : view === "recover" || view === "mail" ? t.setNew : t.create; }
   });
   const first = w.querySelector("input,button"); first && first.focus();
+}
+// username + recovery code, the way the student should keep them
+function recCard(code) {
+  const t = T[lang], u = EDU.user;
+  return `<div class="ucard">${t.yourUser}<b>${escH(u.username)}</b></div>` + (code ? `<div class="ucard rcard">${t.recCode}<b>${escH(code)}</b><span class="note2">${t.recS}</span></div>
+    <button class="btn ghost" id="fSave" type="button">${t.saveCard}</button>` : "");
+}
+function saveCard() {
+  const t = T[lang], u = EDU.user, code = EDU.recovery; if (!u || !code) return;
+  const c = document.createElement("canvas"); c.width = 900; c.height = 520; const g = c.getContext("2d");
+  const grd = g.createLinearGradient(0, 0, 0, 520); grd.addColorStop(0, "#0B2563"); grd.addColorStop(1, "#020B26");
+  g.fillStyle = grd; g.fillRect(0, 0, 900, 520);
+  g.strokeStyle = "#FCA500"; g.lineWidth = 6; g.setLineDash([18, 12]); g.strokeRect(24, 24, 852, 472); g.setLineDash([]);
+  g.textAlign = "center"; g.fillStyle = "#FCA500"; g.font = "900 40px Nunito, Segoe UI, sans-serif"; g.fillText(`${BRAND.en} \u00b7 ${t.cardFor}`, 450, 96);
+  g.fillStyle = "#C9D3EA"; g.font = "600 26px Segoe UI, sans-serif"; g.fillText(`${u.name} \u00b7 ${t.yourUser}`, 450, 170);
+  g.fillStyle = "#fff"; g.font = "900 56px Nunito, Segoe UI, sans-serif"; g.fillText(u.username, 450, 236);
+  g.fillStyle = "#C9D3EA"; g.font = "600 26px Segoe UI, sans-serif"; g.fillText(t.recCode, 450, 310);
+  g.fillStyle = "#FCA500"; g.font = "900 76px Consolas, monospace"; g.fillText(code, 450, 390);
+  g.fillStyle = "#8C9AC0"; g.font = "500 20px Segoe UI, sans-serif"; g.fillText(new Date().toLocaleDateString("en-GB") + " \u00b7 keep it secret", 450, 456);
+  const a = document.createElement("a"); a.download = `recovery-${u.username}.png`; a.href = c.toDataURL("image/png"); document.body.appendChild(a); a.click(); a.remove();
 }
 function renderAccount() {
   const t = T[lang], u = EDU.user, btn = $("acctBtn");
@@ -526,11 +722,73 @@ function acctMenu() {
   const roleName = u.role === "student" ? t.roleS : u.role === "admin" ? t.roleA : t.roleT;
   const canAdmin = u.role === "admin" || (!EDU.server && u.role === "teacher");
   $("acctBox").innerHTML = `<h3>${t.signedAs}</h3><p><b>${escH(u.name)}</b> \u00b7 ${roleName}${u.grade ? ` \u00b7 ${lang === "ar" ? "\u0627\u0644\u0635\u0641" : "Grade"} ${u.grade}` : ""}<br><span class="note2" dir="ltr">${escH(u.username)}</span></p>
-    <div class="arow">${canAdmin ? `<a href="admin/">${t.admin}</a>` : ""}<button id="aSwitch">${t.sw}</button><button id="aOut">${t.out}</button><button id="aClose">${t.close}</button></div>`;
+    <div class="arow">${canAdmin ? `<a href="admin/">${t.admin}</a>` : ""}${u.role !== "student" && EDU.server ? `<a href="teacher/">${t.teacherPage}</a>` : ""}${u.role === "student" && EDU.server ? `<button id="aClasses">${t.myClasses}</button>` : ""}<button id="aEdit">${t.edit}</button><button id="aSwitch">${t.sw}</button><button id="aOut">${t.out}</button><button id="aClose">${t.close}</button></div>`;
   $("ovAcct").hidden = false;
   $("aClose").addEventListener("click", () => ($("ovAcct").hidden = true));
+  $("aEdit").addEventListener("click", editProfile);
+  $("aClasses") && $("aClasses").addEventListener("click", myClasses);
   $("aOut").addEventListener("click", async () => { await EDU.logout(); try { localStorage.removeItem("edu_guest"); } catch {} $("ovAcct").hidden = true; render(); welcome("choose"); });
   $("aSwitch").addEventListener("click", async () => { await EDU.logout(); $("ovAcct").hidden = true; render(); welcome("signin"); });
+}
+// edit my profile: name, grade (students), PIN/password with the current one
+function editProfile() {
+  const t = T[lang], u = EDU.user, kid = u.role === "student";
+  const gradeSel = GRADE_OPTS.map(([g, n]) => `<option value="${g}"${g === u.grade ? " selected" : ""}>${lang === "ar" && g === "KG" ? "\u0627\u0644\u0631\u0648\u0636\u0629" : n}</option>`).join("");
+  const sec = kid ? `inputmode="numeric" pattern="[0-9]*" maxlength="4"` : `dir="ltr"`;
+  $("acctBox").innerHTML = `<h3>${t.editT}</h3><div class="form">
+    <label>${kid ? t.firstName : t.tName}<input id="eName" maxlength="${kid ? 20 : 40}" value="${escH(u.name)}"></label>
+    ${kid ? `<label>${t.gradeL}<select id="eGrade">${gradeSel}</select></label>` : ""}
+    <p class="note2">${kid ? t.userN : t.emailL}: <b dir="ltr">${escH(u.username)}</b></p>
+    ${kid ? `<label>${t.parentL}<input id="eParent" type="email" dir="ltr" value="${escH(u.parent_email || "")}"><span class="note2">${t.parentHelp}</span></label>` : ""}
+    <b style="font-size:14px">${kid ? t.chPin : t.chPass}</b>${kid ? `<span class="note2">${t.needCurFor}</span>` : ""}
+    <div class="two"><label>${kid ? t.curPin : t.curPass}<input id="eOld" type="password" autocomplete="current-password" ${sec}></label><label>${kid ? t.newPin : t.newPass}<input id="eNew" type="password" autocomplete="new-password" ${sec}></label></div>
+    <div class="err" id="eErr"></div><button class="btn" id="eGo">${t.saveP}</button><div class="links">${kid ? `<button id="eRec">${t.newRec}</button>` : ""}<button id="eBack">${t.back}</button></div></div>`;
+  $("eBack").addEventListener("click", acctMenu);
+  $("eGo").addEventListener("click", async () => {
+    const err = $("eErr"), btn = $("eGo"), oldS = $("eOld").value, newS = $("eNew").value; err.textContent = "";
+    const parent = kid ? $("eParent").value.trim().toLowerCase() : undefined;
+    if ((newS || (kid && parent !== (u.parent_email || ""))) && !oldS) { err.textContent = kid ? t.needCurFor : t.needCur; $("eOld").focus(); return; }
+    btn.disabled = true; btn.textContent = t.wait;
+    try {
+      await EDU.updateProfile({ name: $("eName").value, grade: kid ? $("eGrade").value : null, oldSecret: oldS, newSecret: newS, parentEmail: parent });
+      if (kid) { grade = EDU.user.grade; save("edu_hubGrade", grade); }
+      render(); btn.textContent = t.saved; setTimeout(acctMenu, 900);
+    } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = t.saveP; }
+  });
+  if (kid) $("eRec").addEventListener("click", async () => {
+    const err = $("eErr"); err.textContent = "";
+    if (!$("eOld").value) { err.textContent = t.needCurFor; $("eOld").focus(); return; }
+    try {
+      await EDU.newRecoveryCode($("eOld").value);
+      $("acctBox").innerHTML = `<h3>${t.newRecT}</h3><p>${t.newRecS} ${t.recS}</p>${recCard(EDU.recovery)}<div class="links"><button id="eBack2">${t.back}</button></div>`;
+      $("fSave").addEventListener("click", saveCard); $("eBack2").addEventListener("click", acctMenu);
+    } catch (e) { err.textContent = e.message; }
+  });
+  $("eName").focus();
+}
+// a student's classes: the list, leave, and join with a code (the class is shown before joining)
+async function myClasses() {
+  const t = T[lang], box = $("acctBox");
+  box.innerHTML = `<h3>${t.myClasses}</h3><p class="note2">${t.wait}</p>`;
+  let list = [];
+  try { list = await EDU.classes.mine(); } catch (e) { box.innerHTML = `<h3>${t.myClasses}</h3><div class="err">${escH(e.message)}</div><div class="links"><button id="cBack">${t.back}</button></div>`; $("cBack").addEventListener("click", acctMenu); return; }
+  box.innerHTML = `<h3>${t.myClasses}</h3>${list.length ? `<ul class="clist">${list.map(c => `<li><span><b>${escH(c.name)}</b> \u00b7 ${t.withT} ${escH(c.teacher)}</span><button class="lnk" data-leave="${escH(c.id)}">${t.leave}</button></li>`).join("")}</ul>` : `<p class="note2">${t.noClasses}</p>`}
+    <div class="form"><b style="font-size:15px">${t.joinT}</b><label>${t.joinCode}<input id="cCode" dir="ltr" autocapitalize="characters" autocomplete="off" maxlength="9"></label>
+    <div class="err" id="cErr"></div><p id="cQ" hidden></p><button class="btn" id="cGo">${t.check}</button><div class="links"><button id="cBack">${t.back}</button></div></div>`;
+  $("cBack").addEventListener("click", acctMenu);
+  let found = null;
+  $("cCode").addEventListener("input", () => { found = null; $("cQ").hidden = true; $("cGo").textContent = t.check; });
+  $("cGo").addEventListener("click", async () => {
+    $("cErr").textContent = "";
+    try {
+      if (!found) { found = await EDU.classes.info($("cCode").value); $("cQ").textContent = t.joinQ(found.name, found.teacher); $("cQ").hidden = false; $("cGo").textContent = t.joinBtn; return; }
+      await EDU.classes.join($("cCode").value); myClasses();
+    } catch (e) { $("cErr").textContent = e.message; found = null; }
+  });
+  box.querySelectorAll("[data-leave]").forEach(b => b.addEventListener("click", async () => {
+    if (b.textContent !== t.leaveQ) { b.textContent = t.leaveQ; return; }
+    try { await EDU.classes.leave(b.dataset.leave); myClasses(); } catch (e) { $("cErr").textContent = e.message; }
+  }));
 }
 $("acctBtn").addEventListener("click", acctMenu);
 const _render = render;

@@ -12,7 +12,7 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../icon-180.png">
 <link rel="icon" href="../icon-192.png">
-<title>Admin Dashboard</title>
+<title>My Classes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -89,46 +89,111 @@ a.mail{color:var(--gold);word-break:break-all}
 #tUsers td,#oRecent td{white-space:nowrap}
 @media (max-width:640px){#who{order:9;flex-basis:100%;overflow-wrap:anywhere}}
 
+/* class cards and the join-code tile */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ccard{background:var(--stage);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;text-align:start;color:#fff;font:inherit}
+.ccard:hover{border-color:var(--gold)}
+.ccard h3{margin:0;font-family:var(--display);font-size:19px}
+.ccard .code{font-family:Consolas,monospace;font-size:22px;color:var(--gold);letter-spacing:.14em}
+.codebox{background:var(--deep);border:2px dashed var(--gold);border-radius:14px;padding:12px 18px;display:inline-flex;flex-direction:column;align-items:center}
+.codebox b{font-family:Consolas,monospace;font-size:38px;color:var(--gold);letter-spacing:.16em}
+.form2{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.form2 label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--silver)}
+.form2 input,.form2 select{background:var(--deep);border:1.5px solid rgba(201,211,234,.5);border-radius:10px;padding:8px 12px;font-size:15px;color:#fff}
+.b.small{padding:3px 10px;font-size:13px}
+.pinbox{background:rgba(61,196,138,.12);border:1.5px solid var(--green);border-radius:12px;padding:10px 14px}
+.pinbox b{font-family:Consolas,monospace;font-size:26px;color:#7FE3B6;letter-spacing:.2em}
+.head2{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 </style>
 </head>
 <body>
 
 <div class="wrap">
   <header class="bar">
-    <h1><span>Admin</span> dashboard</h1><span class="spacer"></span>
+    <h1><span>My</span> classes</h1><span class="spacer"></span>
     <span class="note" id="who"></span>
     <button class="b" id="refresh" hidden>Refresh</button>
-    <a class="b gold" href="accounts.html">All accounts</a>
     <a class="b" href="../">Back to the app</a>
   </header>
 
   <section class="login" id="login" hidden>
     <h2>Sign in</h2>
-    <p class="note" id="loginNote">Use the admin teacher account.</p>
-    <label>Username or email<input id="u" autocomplete="username" autocapitalize="none"></label>
+    <p class="note" id="loginNote">Sign in with your teacher account.</p>
+    <label>Email<input id="u" autocomplete="username" autocapitalize="none"></label>
     <label>Password<input id="p" type="password" autocomplete="current-password"></label>
     <div class="err" id="err"></div>
     <button id="go">Sign in</button>
   </section>
 
-  <main id="dash" hidden style="display:flex;flex-direction:column;gap:18px">
-    <p class="note" id="mode"></p>
-    <div class="kpis" id="kpis"></div>
-    <div class="grid2">
-      <section class="panel"><h2>Answers per day &#xb7; last 30 days</h2><div class="chart" id="cAnswers"></div></section>
-      <section class="panel"><h2>New accounts per day &#xb7; last 30 days</h2><div class="chart" id="cSign"></div></section>
-    </div>
-    <div class="grid2">
-      <section class="panel"><h2>Games</h2><div class="tw" id="tGames"></div></section>
-      <section class="panel"><h2>Students by grade</h2><div class="tw" id="tGrades"></div></section>
-    </div>
-    <section class="panel"><h2>Weakest skills <span class="note">(at least 10 answers, lowest accuracy first)</span></h2><div class="tw" id="tWeak"></div></section>
-    <section class="panel"><h2>Most played lessons and skills</h2><div class="tw" id="tSkills"></div></section>
-    <section class="panel"><h2>Delete an account</h2>
-      <p class="note">For a parent or teacher who asks to delete an account. Their stars, scores and sign-in are removed; past answers stay only as anonymous totals.</p>
-      <div class="del"><input id="delUser" placeholder="username, e.g. omar482, or teacher email" autocapitalize="none"><button class="b" id="delBtn">Delete</button></div>
-      <div class="err" id="delMsg"></div>
+  <!-- every class -->
+  <main id="list" hidden style="display:flex;flex-direction:column;gap:14px">
+    <section class="panel">
+      <h2>Make a class</h2>
+      <div class="form2">
+        <label>Class name<input id="nName" maxlength="40" placeholder="e.g. Grade 4A"></label>
+        <label>Grade<select id="nGrade"></select></label>
+        <button class="b gold" id="nGo">Make the class</button>
+      </div>
+      <div class="err" id="nErr"></div>
+      <p class="note">Each class gets a join code. Students open the app &#x2192; account button &#x2192; <b>Join a class</b>, or write the code when they sign up.</p>
     </section>
+    <div class="cards" id="cards"></div>
+  </main>
+
+  <!-- one class -->
+  <main id="cls" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div><button class="b" id="backList">&#x2190; My classes</button></div>
+    <section class="panel head2">
+      <div>
+        <h2 id="cName" style="font-size:24px;margin:0"></h2>
+        <p class="note" id="cSub" style="margin:4px 0 0"></p>
+      </div>
+      <div class="codebox"><span class="note">Join code</span><b id="cCode"></b></div>
+    </section>
+    <div class="kpis" id="cKpis"></div>
+    <div class="grid2">
+      <section class="panel"><h2>Answers per day &#xb7; last 30 days</h2><div class="chart" id="cDays"></div></section>
+      <section class="panel"><h2>Skills to practise <span class="note">(weakest first, at least 5 answers)</span></h2><div class="tw" id="cSkills"></div></section>
+    </div>
+    <section class="panel">
+      <h2>Students</h2>
+      <div id="pinMsg"></div>
+      <div class="tw" id="cStudents"></div>
+      <p class="note">Click a student to see their games, skills and latest answers. A student who forgot the PIN: press <b>New PIN</b> and give them the new PIN; they can change it later in Edit profile.</p>
+    </section>
+    <section class="panel">
+      <h2>Class settings</h2>
+      <div class="form2">
+        <label>Class name<input id="eName" maxlength="40"></label>
+        <label>Grade<select id="eGrade"></select></label>
+        <button class="b" id="eSave">Save</button>
+        <button class="b" id="eCode">New join code</button>
+        <button class="b" id="eDel">Delete the class</button>
+      </div>
+      <div class="err" id="eMsg"></div>
+      <p class="note">A new join code stops the old one; students already in the class stay. Deleting the class keeps every student's account and progress.</p>
+    </section>
+  </main>
+
+  <!-- one student of the class -->
+  <main id="one" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div><button class="b" id="backCls">&#x2190; Back to the class</button></div>
+<!-- one account in detail: shared by the admin Accounts page and the teacher's class page (filled by drawDetail) -->
+    <section class="panel who">
+      <h2 id="oName"></h2>
+      <div class="facts" id="oFacts" style="margin-top:12px"></div>
+    </section>
+    <div class="kpis" id="oKpis"></div>
+    <div class="grid2">
+      <section class="panel"><h2>Answers per day &#xb7; last 30 days</h2><div class="chart" id="oDays"></div></section>
+      <section class="panel"><h2>Games</h2><div class="tw" id="oGames"></div></section>
+    </div>
+    <div class="grid2">
+      <section class="panel"><h2>Lessons and skills <span class="note">(weakest first)</span></h2><div class="tw" id="oSkills"></div></section>
+      <section class="panel"><h2>Saved progress</h2><div class="tw" id="oProg"></div></section>
+    </div>
+    <section class="panel"><h2>Latest activity <span class="note">(last 60)</span></h2><div class="tw" id="oRecent"></div></section>
+
   </main>
 </div>
 
@@ -522,46 +587,110 @@ function drawDetail(d) {
   return p;
 }
 
+const GRADES = ["KG", "1", "2", "3", "4", "5", "6"];
+const gradeOpts = sel => `<option value="">Mixed grades</option>` + GRADES.map(g => `<option value="${g}"${g === sel ? " selected" : ""}>${GRADE(g)}</option>`).join("");
+const show = id => ["login", "list", "cls", "one"].forEach(x => ($(x).hidden = x !== id));
+let CLS = null;   // the open class (detail)
 
-async function load() {
-  const d = await EDU.adminStats();
-  $("login").hidden = true; $("dash").hidden = false; $("refresh").hidden = false;
+/* ---------- every class ---------- */
+async function loadList() {
+  const all = await EDU.classes.mine();
+  $("nGrade").innerHTML = gradeOpts($("nGrade").value || "4");
+  $("cards").innerHTML = all.length ? all.map(c => `<button class="ccard" data-c="${esc(c.id)}"><h3>${esc(c.name)}</h3>
+      <span class="note">${c.grade ? GRADE(c.grade) : "Mixed grades"}${EDU.user.role === "admin" && c.teacher_email !== EDU.user.username ? ` \u00b7 ${esc(c.teacher)}` : ""}</span>
+      <span class="code">${esc(c.code)}</span><span>${fmt(c.students)} student${c.students === 1 ? "" : "s"} \u00b7 ${fmt(c.answers7)} answers this week</span></button>`).join("")
+    : `<div class="empty">No classes yet. Make your first class above.</div>`;
+  show("list");
+}
+$("cards").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) location.hash = "c=" + b.dataset.c; });
+$("nGo").addEventListener("click", async () => {
+  $("nErr").textContent = "";
+  try { const c = await EDU.classes.create($("nName").value, $("nGrade").value); $("nName").value = ""; location.hash = "c=" + c.id; }
+  catch (e) { $("nErr").textContent = e.message; }
+});
+
+/* ---------- one class ---------- */
+async function loadClass(id) {
+  const d = await EDU.classes.detail(id), c = d.class; CLS = d;
+  $("cName").textContent = c.name;
+  $("cSub").textContent = `${c.grade ? GRADE(c.grade) : "Mixed grades"} \u00b7 made ${date(c.created_at)}`;
+  $("cCode").textContent = c.code;
+  const st = d.students, ans = st.reduce((s, x) => s + (+x.answers || 0), 0), ok = st.reduce((s, x) => s + (+x.correct || 0), 0), week = Date.now() - 7 * 864e5;
+  $("cKpis").innerHTML = [["Students", fmt(st.length)], ["Active \u00b7 7 days", fmt(st.filter(x => Math.max(ms(x.last_seen), ms(x.last_play)) > week).length)], ["Answers", fmt(ans)], ["Accuracy", ans ? pct(ok, ans) + "%" : "\u2013"]]
+    .map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${v}</b></div>`).join("");
+  bars($("cDays"), d.days, "answers", "answers");
+  table($("cSkills"), [["Lesson"], ["Skill"], ["Students", 1], ["Answers", 1], ["Accuracy", 1]],
+    d.skills.filter(s => s.answers >= 5).sort((x, y) => x.correct / x.answers - y.correct / y.answers).slice(0, 10)
+      .map(s => [`${esc(s.grade)} \u00b7 ${esc(s.lesson)}`, esc(s.skill || "Whole lesson"), fmt(s.students), fmt(s.answers), accCell(s.correct, s.answers)]));
+  $("cStudents").innerHTML = st.length ? `<table><thead><tr><th>Name</th><th>Username</th><th>Grade</th><th>Last active</th><th class="n">Answers</th><th class="n">This week</th><th class="n">Accuracy</th><th></th></tr></thead><tbody>` +
+    st.map(s => `<tr class="row" data-u="${esc(s.username)}" tabindex="0"><td><b>${esc(s.name)}</b>${s.locked ? `<span class="tag lock">Locked 10 min</span>` : ""}</td><td>${esc(s.username)}</td><td>${GRADE(s.grade)}</td>
+      <td>${ago(Math.max(ms(s.last_seen), ms(s.last_play)))}</td><td class="n">${fmt(s.answers)}</td><td class="n">${fmt(s.answers7)}</td><td class="n">${accCell(s.correct, s.answers)}</td>
+      <td style="white-space:nowrap"><button class="b small" data-pin="${esc(s.username)}">New PIN</button> <button class="b small" data-rm="${esc(s.username)}">Remove</button></td></tr>`).join("") + `</tbody></table>`
+    : `<div class="empty">No students yet. Give them the join code <b style="color:var(--gold)">${esc(c.code)}</b>.</div>`;
+  $("eName").value = c.name; $("eGrade").innerHTML = gradeOpts(c.grade || ""); $("eMsg").textContent = ""; armDel = false; $("eDel").textContent = "Delete the class";
+  show("cls");
+}
+// New PIN and Remove ask once more before acting
+let armed = "";
+$("cStudents").addEventListener("click", async e => {
+  const pinB = e.target.closest("[data-pin]"), rmB = e.target.closest("[data-rm]"), id = CLS.class.id;
+  if (pinB || rmB) {
+    const b = pinB || rmB, user = b.dataset.pin || b.dataset.rm, key = (pinB ? "pin:" : "rm:") + user;
+    if (armed !== key) { armed = key; $("cStudents").querySelectorAll("[data-pin],[data-rm]").forEach(x => (x.textContent = x.dataset.pin ? "New PIN" : "Remove")); b.textContent = pinB ? "Yes, new PIN" : "Yes, remove"; return; }
+    armed = ""; b.textContent = pinB ? "New PIN" : "Remove";
+    try {
+      if (pinB) { const r = await EDU.classes.resetPin(id, user);
+        $("pinMsg").innerHTML = `<div class="pinbox">New PIN for <strong>${esc(r.name)} (${esc(r.username)})</strong>: <b>${esc(r.pin)}</b><br><span class="note">Give it to the student now; it is not shown again. They are signed out on every device and can change the PIN in Edit profile.</span></div>`; }
+      else { await EDU.classes.removeStudent(id, user); $("pinMsg").innerHTML = ""; await loadClass(id); }
+    } catch (x) { $("pinMsg").innerHTML = `<div class="err">${esc(x.message)}</div>`; }
+    return;
+  }
+  const r = e.target.closest("tr.row"); if (r) location.hash = `c=${id}&u=${encodeURIComponent(r.dataset.u)}`;
+});
+$("cStudents").addEventListener("keydown", e => { const r = e.target.closest("tr.row"); if (r && e.key === "Enter" && !e.target.closest("button")) location.hash = `c=${CLS.class.id}&u=${encodeURIComponent(r.dataset.u)}`; });
+$("eSave").addEventListener("click", () => saveClass(false));
+$("eCode").addEventListener("click", () => saveClass(true));
+async function saveClass(newCode) {
+  try { await EDU.classes.update(CLS.class.id, $("eName").value, $("eGrade").value, newCode); await loadClass(CLS.class.id); $("eMsg").className = "err ok"; $("eMsg").textContent = newCode ? "New join code made." : "Saved."; }
+  catch (e) { $("eMsg").className = "err"; $("eMsg").textContent = e.message; }
+}
+let armDel = false;
+$("eDel").addEventListener("click", async () => {
+  if (!armDel) { armDel = true; $("eDel").textContent = "Yes, delete the class"; $("eMsg").className = "err"; $("eMsg").textContent = "Click again to delete. Students keep their accounts."; return; }
+  try { await EDU.classes.remove(CLS.class.id); location.hash = ""; } catch (e) { $("eMsg").textContent = e.message; }
+});
+$("backList").addEventListener("click", () => (location.hash = ""));
+$("backCls").addEventListener("click", () => (location.hash = "c=" + (CLS ? CLS.class.id : "")));
+
+/* ---------- pages: #c=<class> \u00b7 #c=<class>&u=<student> \u00b7 no hash = every class ---------- */
+async function route() {
+  $("refresh").hidden = false; $("pinMsg") && ($("pinMsg").innerHTML = "");
   $("who").textContent = `${EDU.user.name} (${EDU.user.username})`;
-  $("mode").textContent = d.device ? "Device mode: these numbers come from this device only. They become app-wide once the server (Supabase) is connected." : `Live data \u00b7 updated ${new Date().toLocaleString("en-GB")}`;
-  const t = d.totals, a = d.answers;
-  $("kpis").innerHTML = [["Students", t.students], ["Teachers", t.teachers], ["Active \u00b7 7 days", t.active7], ["New \u00b7 7 days", t.new7], ["Answers", a.total], ["Accuracy", pct(a.correct, a.total) + "%"]]
-    .map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${typeof v === "number" ? fmt(v) : v}</b></div>`).join("");
-  bars($("cAnswers"), d.days, "answers", "answers");
-  bars($("cSign"), d.days.map(x => ({ ...x, accounts: (+x.students || 0) + (+x.teachers || 0) })), "accounts", "new accounts");
-  table($("tGames"), [["Game"], ["Plays", 1], ["Answers", 1], ["Accuracy", 1]], (d.games || []).filter(g => g.game).map(g => [esc(GAME_NAMES[g.game] || g.game), fmt(g.plays), fmt(g.answers), accCell(g.correct, g.answers)]));
-  table($("tGrades"), [["Grade"], ["Students", 1]], (d.grades || []).map(g => [g.grade === "KG" ? "KG" : `Grade ${esc(g.grade)}`, fmt(g.students)]));
-  const skills = d.skills || [];
-  table($("tWeak"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.filter(s => s.answers >= 10).sort((x, y) => x.correct / x.answers - y.correct / y.answers).slice(0, 8)
-    .map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
-  table($("tSkills"), [["Grade"], ["Lesson"], ["Skill"], ["Answers", 1], ["Accuracy", 1]], skills.slice(0, 25).map(s => [esc(s.grade), esc(s.lesson), esc(s.skill || "Whole lesson"), fmt(s.answers), accCell(s.correct, s.answers)]));
+  const h = new URLSearchParams(location.hash.slice(1)), c = h.get("c"), u = h.get("u");
+  try {
+    if (c && u) { drawDetail(await EDU.classes.student(c, u)); if (!CLS || CLS.class.id !== c) CLS = await EDU.classes.detail(c); show("one"); scrollTo(0, 0); }
+    else if (c) { await loadClass(c); scrollTo(0, 0); }
+    else await loadList();
+  } catch (e) {
+    if (/teachers only/i.test(e.message)) { showLogin("This page is for teacher accounts."); return; }
+    show("list"); $("cards").innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+function showLogin(msg) {
+  show("login"); $("refresh").hidden = true; $("err").textContent = msg || "";
+  if (!EDU.server) $("loginNote").textContent = "Classes work in the online app (server mode).";
 }
 async function boot() {
-  try { await EDU.refresh(); if (EDU.user) { await load(); return; } } catch (e) { $("err").textContent = e.message; }
-  $("login").hidden = false; $("dash").hidden = true;
-  if (!EDU.server) $("loginNote").textContent = "Device mode: sign in with a teacher account made on this device.";
+  try { await EDU.refresh(); if (EDU.user) { await route(); return; } } catch (e) { $("err").textContent = e.message; }
+  showLogin($("err").textContent);
 }
+addEventListener("hashchange", () => EDU.user && route());
 $("go").addEventListener("click", async () => {
   $("err").textContent = "";
-  try { await EDU.login($("u").value, $("p").value); await load(); } catch (e) { $("err").textContent = e.message; }
+  try { await EDU.login($("u").value, $("p").value); await route(); } catch (e) { $("err").textContent = e.message; }
 });
 $("p").addEventListener("keydown", e => { if (e.key === "Enter") $("go").click(); });
-// two clicks to delete: the first asks, the second deletes
-let armed = "";
-$("delBtn").addEventListener("click", async () => {
-  const name = $("delUser").value.trim().toLowerCase(), msg = $("delMsg"); msg.className = "err";
-  if (!name) { msg.textContent = "Write the username first."; return; }
-  if (armed !== name) { armed = name; msg.textContent = `Click Delete again to remove ${name} for good.`; $("delBtn").textContent = "Yes, delete"; return; }
-  armed = ""; $("delBtn").textContent = "Delete";
-  try { const n = await EDU.adminDelete(name); msg.className = n ? "err ok" : "err"; msg.textContent = n ? `${name} was deleted.` : `No account called ${name}.`; if (n) load(); }
-  catch (e) { msg.textContent = e.message; }
-});
-$("delUser").addEventListener("input", () => { armed = ""; $("delBtn").textContent = "Delete"; $("delMsg").textContent = ""; });
-$("refresh").addEventListener("click", () => load().catch(e => ($("err").textContent = e.message)));
+$("refresh").addEventListener("click", () => route());
 boot();
 </script>
 
