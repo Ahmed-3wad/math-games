@@ -147,12 +147,31 @@ canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 .lane .name{font-family:var(--display);font-size:clamp(13px,1.3vw,18px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
 .lane .name i{width:12px;height:12px;border-radius:50%;flex:none}
 .road{position:relative;height:clamp(38px,4.6vw,56px);border-radius:10px;background:#0A1A44;overflow:hidden}
-.road:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:3px dashed rgba(201,211,234,.45)}
+.road:before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:repeating-linear-gradient(90deg,rgba(201,211,234,.45) 0 12px,transparent 12px 22px)}
+.road.moving:before{animation:dash .3s linear infinite}
+@keyframes dash{to{background-position:-22px 0}}
 .road .ticks{position:absolute;inset:0;display:flex}
 .road .ticks span{flex:1;border-right:1px solid rgba(201,211,234,.12)}
 .road .flag{position:absolute;right:0;top:0;bottom:0;width:18px;background:repeating-conic-gradient(#fff 0 25%,#051C54 0 50%) 0 0/9px 9px}
 .car{position:absolute;top:50%;width:clamp(50px,5.4vw,74px);transform:translate(-2%,-50%);transition:left .7s cubic-bezier(.3,1.4,.5,1)}
-.car svg{display:block;width:100%;height:auto}
+.car svg{display:block;width:100%;height:auto;position:relative}
+.car .wheel{transform-box:fill-box;transform-origin:center}
+.car.moving .wheel{animation:spin .22s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.car svg{animation:idle .3s ease-in-out infinite alternate}
+@keyframes idle{to{transform:translateY(-1px)}}
+.car .trail{position:absolute;right:92%;top:22%;width:48px;height:56%;opacity:0;transition:opacity .2s;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.75) 0 2px,transparent 2px 7px);-webkit-mask-image:linear-gradient(90deg,transparent,#000);mask-image:linear-gradient(90deg,transparent,#000)}
+.car.moving .trail{opacity:1;animation:trail .25s linear infinite}
+@keyframes trail{from{transform:translateX(10px)}to{transform:translateX(-10px)}}
+.car .flame{position:absolute;right:96%;top:50%;width:22px;height:12px;margin-top:-2px;opacity:0;border-radius:50% 0 0 50%;
+  background:radial-gradient(ellipse at 100% 50%,#fff 0,#FCA500 35%,#ED4667 70%,transparent 72%);transform-origin:100% 50%}
+.car.boost .flame{opacity:1;animation:flame .12s ease-in-out infinite alternate}
+@keyframes flame{from{transform:scaleX(.7)}to{transform:scaleX(1.25)}}
+.car.lead svg{filter:drop-shadow(0 0 6px rgba(252,165,0,.85))}
+.road .flag.wave{animation:wave .25s ease-in-out 6 alternate}
+@keyframes wave{from{transform:skewY(-8deg)}to{transform:skewY(8deg)}}
+@media (prefers-reduced-motion:reduce){.car svg,.car.moving .wheel,.car.moving .trail,.car.boost .flame,.road.moving:before,.road .flag.wave{animation:none}}
 .steps{font-family:var(--display);font-size:12px;color:var(--muted);text-align:right;margin-top:-4px}
 .who{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
 .who .t{border:2px solid rgba(201,211,234,.45);background:rgba(2,11,38,.5);border-radius:99px;padding:8px 16px;font-family:var(--display);display:flex;align-items:center;gap:8px}
@@ -1579,10 +1598,160 @@ const KIT = (() => {
   return { load, save, tone, sfx, mountMenu, toggle, menuOpen, nextQuestion, lessons, allLessons, by, summary, started, get grade() { return grade; }, showQuestion, mark, explain, keys, confetti, esc };
 })();
 
+/* ================= FX: sound effects and motion for the games (no libraries, works offline) =================
+   Sound: every effect is synthesised with Web Audio (no audio files to load, license or cache). FX.play(name) follows the
+   app-wide sound setting (edu_sound) and starts only after a tap, as browsers require. Each sound is a function of
+   (context, output, start time), so the same code can render a preview offline (FX.render, used for the owner's videos).
+   Motion: Web Animations API helpers. With "reduce motion" on, they do nothing and the game still shows the end state. */
+const FX = (() => {
+  const reduce = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const soundOn = () => { try { return JSON.parse(localStorage.getItem("edu_sound") ?? "true") !== false; } catch { return true; } };
+
+  /* ---- sound building blocks ---- */
+  const noiseBufs = new WeakMap();
+  function noiseBuf(c) {
+    if (!noiseBufs.has(c)) { const b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; noiseBufs.set(c, b); }
+    return noiseBufs.get(c);
+  }
+  function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+  // a pitched note; f2 slides the pitch, lp puts it through a low-pass filter
+  function tone(c, out, t, { type = "sine", f, f2, d = 0.2, a = 0.005, vol = 0.2, lp }) {
+    const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + a + d);
+    env(g, t, a, vol, d);
+    let node = o; if (lp) { const fl = c.createBiquadFilter(); fl.type = "lowpass"; fl.frequency.value = lp; o.connect(fl); node = fl; }
+    node.connect(g).connect(out); o.start(t); o.stop(t + a + d + 0.05);
+  }
+  // filtered noise: whooshes, sparkle and crowd
+  function hiss(c, out, t, { f = 1200, f2, q = 1, d = 0.3, a = 0.02, vol = 0.2, type = "bandpass" }) {
+    const s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = noiseBuf(c); s.loop = true; fl.type = type; fl.Q.value = q; fl.frequency.setValueAtTime(f, t);
+    if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + a + d);
+    env(g, t, a, vol, d); s.connect(fl).connect(g).connect(out); s.start(t); s.stop(t + a + d + 0.05);
+  }
+  const notes = (c, out, t, list, o) => list.forEach(([f, at, d]) => tone(c, out, t + at, { ...o, f, d: d || o.d }));
+
+  /* ---- the sound list: short, bright, never harsh (young children, classrooms) ---- */
+  const SOUNDS = {
+    tap: (c, o, t) => tone(c, o, t, { type: "triangle", f: 880, d: 0.06, vol: 0.12 }),
+    correct: (c, o, t) => { notes(c, o, t, [[660, 0], [880, 0.07], [1320, 0.14]], { type: "triangle", d: 0.18, vol: 0.16 }); tone(c, o, t + 0.2, { f: 2640, d: 0.3, vol: 0.05 }); },
+    wrong: (c, o, t) => { tone(c, o, t, { f: 320, f2: 150, d: 0.32, vol: 0.18 }); tone(c, o, t + 0.04, { type: "triangle", f: 240, f2: 120, d: 0.3, vol: 0.07 }); },
+    streak: (c, o, t) => { notes(c, o, t, [[523, 0], [659, 0.05], [784, 0.1], [1047, 0.15], [1319, 0.2]], { type: "triangle", d: 0.16, vol: 0.13 }); hiss(c, o, t + 0.15, { f: 6000, q: 0.7, d: 0.5, vol: 0.05, type: "highpass" }); },
+    whoosh: (c, o, t) => hiss(c, o, t, { f: 350, f2: 2600, q: 1.2, a: 0.05, d: 0.35, vol: 0.28 }),
+    engine: (c, o, t) => { tone(c, o, t, { type: "sawtooth", f: 70, f2: 150, a: 0.05, d: 0.55, vol: 0.12, lp: 700 }); tone(c, o, t, { type: "square", f: 35, f2: 75, a: 0.05, d: 0.55, vol: 0.06, lp: 300 }); },
+    rev: (c, o, t) => { tone(c, o, t, { type: "sawtooth", f: 55, f2: 230, a: 0.1, d: 1.0, vol: 0.13, lp: 900 }); tone(c, o, t, { type: "square", f: 28, f2: 115, a: 0.1, d: 1.0, vol: 0.06, lp: 300 }); },
+    beep: (c, o, t) => tone(c, o, t, { type: "square", f: 660, d: 0.13, vol: 0.09, lp: 2500 }),
+    go: (c, o, t) => { tone(c, o, t, { type: "square", f: 1320, d: 0.4, vol: 0.1, lp: 3500 }); hiss(c, o, t + 0.05, { f: 400, f2: 3000, d: 0.45, vol: 0.2 }); },
+    overtake: (c, o, t) => { tone(c, o, t, { type: "triangle", f: 523, f2: 1047, d: 0.22, vol: 0.14 }); hiss(c, o, t, { f: 800, f2: 3000, d: 0.25, vol: 0.12 }); },
+    stretch: (c, o, t) => notes(c, o, t, [[784, 0], [784, 0.12], [1047, 0.24]], { type: "square", d: 0.1, vol: 0.07, lp: 3000 }),
+    star: (c, o, t) => { tone(c, o, t, { f: 1568, d: 0.4, vol: 0.09 }); tone(c, o, t + 0.06, { f: 2093, d: 0.45, vol: 0.07 }); },
+    tick: (c, o, t) => tone(c, o, t, { type: "square", f: 1200, d: 0.03, vol: 0.04 }),
+    win: (c, o, t) => {
+      notes(c, o, t, [[523, 0, 0.18], [659, 0.15, 0.18], [784, 0.3, 0.18], [1047, 0.45, 0.35], [784, 0.75, 0.15], [1047, 0.9, 0.7]], { type: "triangle", vol: 0.15 });
+      notes(c, o, t, [[262, 0.45, 0.5], [330, 0.9, 0.8]], { type: "sine", vol: 0.1 });
+      hiss(c, o, t + 0.45, { f: 1800, q: 0.6, a: 0.2, d: 1.4, vol: 0.06 });   // the crowd
+    },
+  };
+
+  /* ---- live playback (+ a log of what played, for previews) ---- */
+  let AC = null, master = null;
+  const log = [], T0 = performance.now();
+  function live() {
+    if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = 0.8; master.connect(AC.destination); }
+    if (AC.state === "suspended") AC.resume();
+    return AC;
+  }
+  function play(name) {
+    if (!SOUNDS[name]) return;
+    log.push({ name, at: (performance.now() - T0) / 1000 });
+    if (!soundOn()) return;
+    try { const c = live(); SOUNDS[name](c, master, c.currentTime + 0.01); } catch {}
+  }
+  // render logged sounds (from second `from`, `len` seconds) offline \u2192 WAV as base64; used only to make preview videos
+  async function render(from = 0, len = 10) {
+    const rate = 44100, c = new OfflineAudioContext(1, Math.ceil(rate * len), rate), out = c.createGain(); out.gain.value = 0.8; out.connect(c.destination);
+    log.filter(e => e.at >= from && e.at < from + len).forEach(e => SOUNDS[e.name](c, out, e.at - from + 0.01));
+    const buf = await c.startRendering(), d = buf.getChannelData(0), wav = new DataView(new ArrayBuffer(44 + d.length * 2));
+    const str = (o, s) => [...s].forEach((ch, i) => wav.setUint8(o + i, ch.charCodeAt(0)));
+    str(0, "RIFF"); wav.setUint32(4, 36 + d.length * 2, true); str(8, "WAVEfmt "); wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true);
+    wav.setUint32(24, rate, true); wav.setUint32(28, rate * 2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true); str(36, "data"); wav.setUint32(40, d.length * 2, true);
+    for (let i = 0; i < d.length; i++) wav.setInt16(44 + i * 2, Math.max(-1, Math.min(1, d[i])) * 0x7fff, true);
+    let bin = ""; const bytes = new Uint8Array(wav.buffer); for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+
+  /* ---- motion ---- */
+  let css = false;
+  function ensureCss() {
+    if (css) return; css = true;
+    const s = document.createElement("style");
+    s.textContent = `.fx-layer{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.fx-float{position:fixed;transform:translate(-50%,-50%);font-family:var(--display,"Nunito",sans-serif);font-weight:900;font-size:clamp(18px,2.2vw,28px);color:#FCA500;text-shadow:0 2px 0 #8A5A00,0 0 12px rgba(252,165,0,.5);white-space:nowrap}
+.fx-dot{position:fixed;width:9px;height:9px;border-radius:50%;margin:-4.5px 0 0 -4.5px}
+.fx-banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);text-align:center;font-family:var(--display,"Nunito",sans-serif);font-weight:900;color:#fff;
+  font-size:clamp(30px,6vw,72px);text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 30px rgba(252,165,0,.55);white-space:nowrap}
+.fx-banner small{display:block;font-size:.38em;color:#FCA500;letter-spacing:.08em}
+.fx-count{position:fixed;inset:0;display:grid;place-items:center;background:rgba(2,11,38,.45);z-index:59}
+.fx-count b{font-family:var(--display,"Nunito",sans-serif);font-weight:900;font-size:clamp(90px,18vw,220px);color:#FCA500;text-shadow:0 8px 0 #8A5A00,0 0 60px rgba(252,165,0,.55)}`;
+    document.head.appendChild(s);
+  }
+  const layer = () => { ensureCss(); let l = document.querySelector(".fx-layer"); if (!l) { l = document.createElement("div"); l.className = "fx-layer"; l.setAttribute("aria-hidden", "true"); document.body.appendChild(l); } return l; };
+  const center = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const anim = (el, frames, o) => (el && el.animate && !reduce() ? el.animate(frames, typeof o === "number" ? { duration: o } : o) : null);
+  const pop = (el, s = 1.12) => anim(el, [{ transform: "scale(1)" }, { transform: `scale(${s})` }, { transform: "scale(1)" }], { duration: 260, easing: "ease-out" });
+  const shake = el => anim(el, [0, -9, 8, -6, 4, 0].map(x => ({ transform: `translateX(${x}px)` })), { duration: 340, easing: "ease-out" });
+  const bounce = el => anim(el, [0, -18, 0, -7, 0].map(y => ({ transform: `translateY(${y}px)` })), { duration: 700, easing: "ease-out" });
+  // "+1", "Overtake!" \u2026 rising from an element
+  function floatText(el, text, color) {
+    if (!el || reduce()) return;
+    const [x, y] = center(el), s = document.createElement("div"); s.className = "fx-float"; s.textContent = text; s.style.left = x + "px"; s.style.top = y + "px"; if (color) s.style.color = color;
+    layer().appendChild(s);
+    s.animate([{ opacity: 0, transform: "translate(-50%,-30%) scale(.6)" }, { opacity: 1, transform: "translate(-50%,-90%) scale(1.1)", offset: 0.25 }, { opacity: 0, transform: "translate(-50%,-220%) scale(1)" }], { duration: 1100, easing: "ease-out" }).onfinish = () => s.remove();
+  }
+  // a burst of dots from an element (a right answer, a finish line)
+  function burst(el, colors = ["#FCA500", "#3DC48A", "#fff", "#108CB5", "#ED4667"], n = 16) {
+    if (!el || reduce()) return;
+    const [x, y] = center(el), l = layer();
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement("div"); d.className = "fx-dot"; d.style.left = x + "px"; d.style.top = y + "px"; d.style.background = colors[i % colors.length]; l.appendChild(d);
+      const a = (Math.PI * 2 * i) / n + Math.random() * 0.4, r = 50 + Math.random() * 60;
+      d.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${Math.cos(a) * r}px,${Math.sin(a) * r + 20}px) scale(.3)`, opacity: 0 }], { duration: 650 + Math.random() * 250, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => d.remove();
+    }
+  }
+  // an animation's end, or its planned length if the browser never finishes it (hidden page, headless, old device),
+  // so a game waiting on it can never freeze
+  const settle = (a, ms) => Promise.race([a ? a.finished.catch(() => {}) : Promise.resolve(), new Promise(r => setTimeout(r, ms + 150))]);
+  // a big message in the middle of the screen ("3 in a row!", "Final stretch!")
+  function banner(text, sub, ms = 1100) {
+    if (reduce()) return Promise.resolve();
+    const b = document.createElement("div"); b.className = "fx-banner"; b.innerHTML = (sub ? `<small>${sub}</small>` : "") + text; layer().appendChild(b);
+    const a = b.animate([{ opacity: 0, transform: "translate(-50%,-50%) scale(.4) rotate(-6deg)" }, { opacity: 1, transform: "translate(-50%,-50%) scale(1.08) rotate(2deg)", offset: 0.18 },
+      { opacity: 1, transform: "translate(-50%,-50%) scale(1) rotate(0)", offset: 0.75 }, { opacity: 0, transform: "translate(-50%,-70%) scale(.9)" }], { duration: ms, easing: "ease-out" });
+    return settle(a, ms).then(() => b.remove());
+  }
+  // 3 \u00b7 2 \u00b7 1 \u00b7 GO! (sounds always; the big numbers only with motion on)
+  async function countdown(goText = "GO!", n = 3) {
+    ensureCss();
+    const o = document.createElement("div"); o.className = "fx-count"; o.innerHTML = "<b></b>"; document.body.appendChild(o);
+    const b = o.firstChild;
+    for (let i = n; i >= 0; i--) {
+      b.textContent = i ? String(i) : goText; play(i ? "beep" : "go");
+      const a = anim(b, [{ transform: "scale(.3)", opacity: 0 }, { transform: "scale(1.15)", opacity: 1, offset: 0.3 }, { transform: "scale(1)", opacity: 1, offset: 0.8 }, { transform: "scale(1.4)", opacity: 0 }], { duration: 640, easing: "ease-out" });
+      await (a ? settle(a, 640) : new Promise(r => setTimeout(r, 450)));
+    }
+    o.remove();
+  }
+  // items one after another (podium rows, result cards)
+  const stagger = (els, step = 90) => [...els].forEach((el, i) => anim(el, [{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { duration: 380, delay: i * step, easing: "ease-out", fill: "backwards" }));
+
+  return { play, render, get log() { return log; }, reduce, anim, pop, shake, bounce, floatText, burst, banner, countdown, stagger, sounds: Object.keys(SOUNDS) };
+})();
+
 
 /* ================= Team Race ================= */
 const COLORS = ["#ED4667", "#108CB5", "#FCA500", "#2F9E6E"], ROBOT = "#8C9AC0";
-const car = c => `<svg viewBox="0 0 74 34"><rect x="2" y="12" width="68" height="14" rx="6" fill="${c}"/><path d="M16 12l9-10h20l11 10z" fill="${c}"/><rect x="27" y="4" width="15" height="8" rx="2" fill="#BFE9F7"/><circle cx="18" cy="27" r="6" fill="#020B26" stroke="#C9D3EA" stroke-width="2"/><circle cx="54" cy="27" r="6" fill="#020B26" stroke="#C9D3EA" stroke-width="2"/></svg>`;
+const wheel = x => `<g class="wheel"><circle cx="${x}" cy="27" r="6" fill="#020B26" stroke="#C9D3EA" stroke-width="2"/><path d="M${x} 22.5v9M${x - 4.5} 27h9" stroke="#C9D3EA" stroke-width="1.4"/></g>`;
+const car = c => `<span class="trail"></span><span class="flame"></span><svg viewBox="0 0 74 34"><rect x="2" y="12" width="68" height="14" rx="6" fill="${c}"/><path d="M16 12l9-10h20l11 10z" fill="${c}"/><rect x="27" y="4" width="15" height="8" rx="2" fill="#BFE9F7"/><rect x="62" y="15" width="7" height="4" rx="2" fill="#FFE7A3"/>${wheel(18)}${wheel(54)}</svg>`;
 const st = KIT.load("race_setup", {});
 // a student always races alone against the robot; a teacher starts in class mode
 const STUDENT = EDU.role() === "student";
@@ -1613,17 +1782,20 @@ function show(id) { ["scrSetup", "scrRace", "scrEnd"].forEach(s => ($(s).hidden 
 $("btnStart").addEventListener("click", startRace);
 $("btnAgain").addEventListener("click", startRace);
 $("btnSetup").addEventListener("click", () => { renderSetup(); show("scrSetup"); });
-function startRace() {
+async function startRace() {
   persist();
   const len = +$("len").value;
   const racers = mode === "home"
     ? [{ name: $("pName").value.trim() || "Me", color: COLORS[0], pos: 0 }, { name: "Robot", color: ROBOT, pos: 0, robot: true }]
     : Array.from({ length: +$("nTeams").value }, (_, i) => ({ name: names[i], color: COLORS[i], pos: 0 }));
-  RACE = { len, racers, n: 0, odds: +$("robot").value };
+  RACE = { len, racers, n: 0, odds: +$("robot").value, streak: 0, stretch: false, leader: -1 };
   KIT.started();
   $("track").innerHTML = racers.map((r, i) => `<div class="lane"><div class="name"><i style="background:${r.color}"></i><span>${KIT.esc(r.name)}</span></div><div class="road"><div class="ticks">${"<span></span>".repeat(len)}</div><div class="flag"></div><div class="car" id="car${i}" style="left:0%">${car(r.color)}</div></div></div>`).join("") + `<div class="steps">Finish line: ${len} steps</div>`;
-  $("classCtl").hidden = mode === "home";
-  show("scrRace"); nextQ();
+  $("classCtl").hidden = mode === "home"; $("qBox").innerHTML = ""; $("explain").hidden = true; $("btnNext").hidden = true;
+  $("btnShow").hidden = true; $("who").hidden = true; $("hint").hidden = true; $("btnMove").hidden = true;
+  show("scrRace");
+  FX.play("rev"); await FX.countdown();
+  nextQ();
 }
 const tier = () => { const lead = Math.max(...RACE.racers.map(r => r.pos)) / RACE.len; return lead < .34 ? 1 : lead < .67 ? 2 : 3; };
 function nextQ() {
@@ -1635,16 +1807,18 @@ function nextQ() {
 }
 function pickAnswer(i) {
   if (RACE.done) return;
-  if (mode === "class") { document.querySelectorAll("#qBox .opt").forEach((b, j) => b.classList.toggle("pick", j === i)); KIT.sfx.pick(); return; }
+  if (mode === "class") { document.querySelectorAll("#qBox .opt").forEach((b, j) => b.classList.toggle("pick", j === i)); FX.play("tap"); return; }
   RACE.done = true;
-  const ok = i === RACE.q.correct;
-  KIT.mark($("qBox"), RACE.q, i); ok ? KIT.sfx.right() : KIT.sfx.wrong();
+  const ok = i === RACE.q.correct, btn = document.querySelectorAll("#qBox .opt")[i];
+  KIT.mark($("qBox"), RACE.q, i);
+  if (ok) { FX.play("correct"); FX.pop(btn); FX.burst(btn); } else { FX.play("wrong"); FX.shake(btn); }
+  streak(ok);
   const ex = $("explain"); ex.hidden = false; ex.classList.toggle("bad", !ok); ex.innerHTML = KIT.explain(RACE.q, i);
   const moves = [ok, Math.random() < RACE.odds];
   advance(moves);
 }
 $("btnShow").addEventListener("click", () => {
-  RACE.done = true; KIT.mark($("qBox"), RACE.q, null); KIT.sfx.right();
+  RACE.done = true; KIT.mark($("qBox"), RACE.q, null); FX.play("correct"); FX.pop(document.querySelectorAll("#qBox .opt")[RACE.q.correct]);
   const ex = $("explain"); ex.hidden = false; ex.classList.remove("bad"); ex.innerHTML = KIT.explain(RACE.q, RACE.q.correct);
   $("btnShow").hidden = true; $("hint").hidden = true;
   $("who").hidden = false;
@@ -1657,13 +1831,39 @@ $("btnMove").addEventListener("click", () => {
   $("btnMove").hidden = true; $("who").hidden = true;
   advance(moves);
 });
+// home mode: 3, 5, 8 \u2026 right answers in a row \u2192 a banner and a boost flame on the player's car (looks only; the race stays fair)
+function streak(ok) {
+  RACE.streak = ok ? RACE.streak + 1 : 0;
+  $("car0").classList.toggle("boost", RACE.streak >= 3);
+  if (ok && (RACE.streak === 3 || RACE.streak === 5 || (RACE.streak > 5 && RACE.streak % 3 === 2))) { FX.play("streak"); FX.banner(`${RACE.streak} in a row!`, "STREAK"); }
+}
+const leaderOf = () => { const top = Math.max(...RACE.racers.map(r => r.pos)), at = RACE.racers.map((r, i) => (r.pos === top ? i : -1)).filter(i => i >= 0); return top > 0 && at.length === 1 ? at[0] : -1; };
 function advance(moves) {
   let any = false;
-  RACE.racers.forEach((r, i) => { if (moves[i] && r.pos < RACE.len) { r.pos++; any = true; } $("car" + i).style.left = `calc(${(r.pos / RACE.len) * 100}% - ${(r.pos / RACE.len) * 64}px)`; });
-  if (any) KIT.sfx.move();
-  const winners = RACE.racers.filter(r => r.pos >= RACE.len);
-  if (winners.length) setTimeout(() => finish(winners), 900);
-  else $("btnNext").hidden = false;
+  const before = leaderOf(), aheadBefore = mode === "home" && RACE.racers[0].pos > RACE.racers[1].pos;
+  RACE.racers.forEach((r, i) => {
+    const c = $("car" + i);
+    if (moves[i] && r.pos < RACE.len) {
+      r.pos++; any = true;
+      c.classList.add("moving"); c.parentNode.classList.add("moving");
+      setTimeout(() => { c.classList.remove("moving"); c.parentNode.classList.remove("moving"); }, 750);
+      FX.anim(c.querySelector("svg"), [{ transform: "translateY(0) rotate(0)" }, { transform: "translateY(-7px) rotate(-6deg)", offset: 0.3 }, { transform: "translateY(0) rotate(0)" }], { duration: 650, easing: "ease-out" });
+      setTimeout(() => FX.floatText(c, "+1", r.color), 380);
+    }
+    c.style.left = `calc(${(r.pos / RACE.len) * 100}% - ${(r.pos / RACE.len) * 64}px)`;
+  });
+  if (any) { FX.play("whoosh"); FX.play("engine"); }
+  const lead = leaderOf();
+  RACE.racers.forEach((_, i) => $("car" + i).classList.toggle("lead", i === lead));
+  if (mode === "home" && !aheadBefore && RACE.racers[0].pos > RACE.racers[1].pos) setTimeout(() => { FX.play("overtake"); FX.floatText($("car0"), "Overtake!", "#3DC48A"); }, 700);
+  else if (mode === "class" && lead >= 0 && lead !== before && lead !== RACE.leader) setTimeout(() => { FX.play("overtake"); FX.floatText($("car" + lead), "Takes the lead!", "#3DC48A"); }, 700);
+  if (lead >= 0) RACE.leader = lead;
+  const winners = RACE.racers.filter(r => r.pos >= RACE.len), top = Math.max(...RACE.racers.map(r => r.pos));
+  if (!winners.length && !RACE.stretch && top >= RACE.len - 2) { RACE.stretch = true; setTimeout(() => { FX.play("stretch"); FX.banner("Final stretch!", "ALMOST THERE"); }, 800); }
+  if (winners.length) {
+    RACE.racers.forEach((r, i) => { if (r.pos >= RACE.len) { const flag = $("car" + i).parentNode.querySelector(".flag"); flag.classList.add("wave"); setTimeout(() => FX.burst(flag), 600); } });
+    setTimeout(() => finish(winners), 1500);
+  } else $("btnNext").hidden = false;
 }
 $("btnNext").addEventListener("click", nextQ);
 KIT.keys((i, e) => {
@@ -1679,7 +1879,8 @@ function finish(winners) {
   $("podium").innerHTML = RACE.racers.slice().sort((a, b) => b.pos - a.pos).map(r => `<div class="${r.pos >= RACE.len ? "first" : ""}"><span>${KIT.esc(r.name)}</span><span>${r.pos} / ${RACE.len} steps</span></div>`).join("") +
     `<div><span>Questions</span><span>${RACE.n}</span></div>`;
   show("scrEnd");
-  if (!winners.every(w => w.robot)) { KIT.confetti(); KIT.sfx.win(); }
+  FX.pop($("winner"), 1.2); FX.bounce($("scrEnd").querySelector("img")); FX.stagger($("podium").children);
+  if (!winners.every(w => w.robot)) { KIT.confetti(); FX.play("win"); } else FX.play("wrong");
 }
 renderSetup();
 </script>
